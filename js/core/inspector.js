@@ -5,6 +5,18 @@ import { state } from './canvas.js';
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 
+// Ensure <input type="color"> gets a #rrggbb value (not rgb(...))
+function asHex(col) {
+  if (!col) return '#000000';
+  if (col.startsWith('#')) return col;
+  const m = col.match(/rgba?\((\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+  if (!m) return '#000000';
+  const r = (+m[1]).toString(16).padStart(2, '0');
+  const g = (+m[2]).toString(16).padStart(2, '0');
+  const b = (+m[3]).toString(16).padStart(2, '0');
+  return `#${r}${g}${b}`;
+}
+
 export function initInspector() {
   renderEmpty();
 }
@@ -65,22 +77,11 @@ function renderFor(el) {
   form.innerHTML = html;
 
   // Wire common inputs
-  $('#c_x').onchange = (e) => {
-    el.style.left = snap(+e.target.value) + 'px';
-  };
-  $('#c_y').onchange = (e) => {
-    el.style.top = snap(+e.target.value) + 'px';
-  };
-  $('#c_w').onchange = (e) => {
-    el.style.width = Math.max(40, snap(+e.target.value)) + 'px';
-  };
-  $('#c_h').onchange = (e) => {
-    el.style.height = Math.max(30, snap(+e.target.value)) + 'px';
-  };
-  $('#delete').onclick = () => {
-    el.remove();
-    renderEmpty();
-  };
+  $('#c_x').onchange = (e) => { el.style.left = snap(+e.target.value) + 'px'; };
+  $('#c_y').onchange = (e) => { el.style.top  = snap(+e.target.value) + 'px'; };
+  $('#c_w').onchange = (e) => { el.style.width  = Math.max(40, snap(+e.target.value)) + 'px'; };
+  $('#c_h').onchange = (e) => { el.style.height = Math.max(30, snap(+e.target.value)) + 'px'; };
+  $('#delete').onclick = () => { el.remove(); renderEmpty(); };
 
   // Wire type-specific
   for (const grp of spec.inspector?.groups || []) {
@@ -93,32 +94,18 @@ function renderFor(el) {
   }
 }
 
-function snap(v) {
-  return Math.round(v / 10) * 10;
-}
+function snap(v) { return Math.round(v / 10) * 10; }
 
 function renderControl(key, ctrl, val) {
   const id = 'p_' + key;
-  if (ctrl.type === 'text')
-    return `<input id="${id}" type="text" value="${escapeHtml(val || '')}" />`;
-  if (ctrl.type === 'number')
-    return `<input id="${id}" type="number" value="${val || 0}" min="${
-      ctrl.min ?? ''
-    }" max="${ctrl.max ?? ''}" />`;
-  if (ctrl.type === 'select')
-    return `<select id="${id}">${(ctrl.options || [])
-      .map((o) => `<option ${o === val ? 'selected' : ''}>${o}</option>`)
-      .join('')}</select>`;
-  if (ctrl.type === 'checkbox')
-    return `<select id="${id}"><option ${val ? 'selected' : ''} value="true">Да</option><option ${
-      !val ? 'selected' : ''
-    } value="false">Не</option></select>`;
-  if (ctrl.type === 'color')
-    return `<div class="swatch"><input id="${id}" type="color" value="${
-      val || '#000000'
-    }" /><input id="${id}_txt" type="text" value="${
-      val || '#000000'
-    }" /></div>`;
+  if (ctrl.type === 'text') return `<input id="${id}" type="text" value="${escapeHtml(val || '')}" />`;
+  if (ctrl.type === 'number') return `<input id="${id}" type="number" value="${val || 0}" min="${ctrl.min ?? ''}" max="${ctrl.max ?? ''}" />`;
+  if (ctrl.type === 'select') return `<select id="${id}">${(ctrl.options || []).map((o) => `<option ${o === val ? 'selected' : ''}>${o}</option>`).join('')}</select>`;
+  if (ctrl.type === 'checkbox') return `<select id="${id}"><option ${val ? 'selected' : ''} value="true">Да</option><option ${!val ? 'selected' : ''} value="false">Не</option></select>`;
+  if (ctrl.type === 'color') {
+    const hex = asHex(val);
+    return `<div class="swatch"><input id="${id}" type="color" value="${hex}" /><input id="${id}_txt" type="text" value="${hex}" /></div>`;
+  }
   return `<input id="${id}" type="text" value="${escapeHtml(val || '')}" />`;
 }
 
@@ -127,7 +114,7 @@ function applyChange(el, type, key, ctrl) {
   if (ctrl.type === 'color') {
     const c = document.getElementById('p_' + key);
     const t = document.getElementById('p_' + key + '_txt');
-    value = c.value;
+    value = c.value; // already #rrggbb
     t.value = value;
   } else if (ctrl.type === 'checkbox') {
     const v = document.getElementById('p_' + key).value;
@@ -143,71 +130,49 @@ function applyChange(el, type, key, ctrl) {
 }
 
 function extractCommon(el) {
-  return {
-    x: +el.style.left.replace('px', '') || 0,
-    y: +el.style.top.replace('px', '') || 0,
-    w: el.offsetWidth,
-    h: el.offsetHeight,
-  };
+  return { x: +el.style.left.replace('px', '') || 0, y: +el.style.top.replace('px', '') || 0, w: el.offsetWidth, h: el.offsetHeight };
 }
 function extractByType(el, type) {
   if (type === 'button') {
     const b = el.querySelector('button');
     const variant = b.className.replace('variant-', '') || 'primary';
-    return {
-      text: b.textContent,
-      fontSize: parseInt(getComputedStyle(b).fontSize, 10),
-      variant,
-    };
+    return { text: b.textContent, fontSize: parseInt(getComputedStyle(b).fontSize, 10), variant };
   }
   if (type === 'label') {
-    return {
-      text: el.textContent,
-      fontSize: parseInt(getComputedStyle(el).fontSize, 10),
-    };
+    return { text: el.textContent, fontSize: parseInt(getComputedStyle(el).fontSize, 10) };
   }
   if (type === 'toggle') {
     const t = el.querySelector('.toggle');
-    return {
-      text: t.textContent,
-      fontSize: parseInt(getComputedStyle(t).fontSize, 10),
-    };
+    return { text: t.textContent, fontSize: parseInt(getComputedStyle(t).fontSize, 10) };
   }
   if (type === 'panel') {
     const header = !!el.querySelector('.panel-header');
+    // Read computed colors and convert to hex for the color inputs
+    const borderColor = el.style.borderColor || getComputedStyle(el).borderColor;
+    const bg = el.style.background || getComputedStyle(el).backgroundColor;
+    const headerEl = el.querySelector('.panel-header');
+    const headerColor = headerEl ? (headerEl.style.background || getComputedStyle(headerEl).backgroundColor) : '#1b2232';
+
     return {
       radius: parseInt(el.style.borderRadius || 12, 10),
       borderWidth: parseInt(el.style.borderWidth || 1, 10),
-      borderColor: el.style.borderColor || '#2a2f44',
-      bg: el.style.background || '#121722',
+      borderColor: asHex(borderColor),
+      bg: asHex(bg),
       header,
-      headerText: header
-        ? el.querySelector('.panel-header')?.textContent || 'Panel'
-        : 'Panel',
-      headerColor: header
-        ? el.querySelector('.panel-header')?.style.background || '#1b2232'
-        : '#1b2232',
+      headerText: header ? (headerEl?.textContent || 'Panel') : 'Panel',
+      headerColor: asHex(headerColor),
     };
   }
   if (type === 'textfield') {
     const inp = el.querySelector('input');
-    return {
-      label: el.querySelector('label')?.textContent || '',
-      placeholder: inp.placeholder || '',
-      fontSize: parseInt(getComputedStyle(inp).fontSize, 10),
-    };
+    return { label: el.querySelector('label')?.textContent || '', placeholder: inp.placeholder || '', fontSize: parseInt(getComputedStyle(inp).fontSize, 10) };
   }
   if (type === 'checkbox') {
-    return {
-      label: el.querySelector('.lbl').textContent,
-      checked: el.querySelector('.box').style.background !== 'rgb(15, 20, 30)',
-    };
+    return { label: el.querySelector('.lbl').textContent, checked: el.querySelector('.box').style.background !== 'rgb(15, 20, 30)' };
   }
   return {};
 }
 
 function escapeHtml(s) {
-  return (s || '').replace(/[&<>"']/g, (m) =>
-    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m])
-  );
+  return (s || '').replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 }
