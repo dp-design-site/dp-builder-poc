@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="bg">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DP Configurator Builder (MVP)</title>
+  <link rel="stylesheet" href="styles.css" />
+  <!-- Interact.js за drag & resize -->
+  <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">DP Configurator Builder · MVP</div>
+    <div class="actions">
+      <button id="btn-export">Export JSON</button>
+      <label class="file">
+        <input id="file-import" type="file" accept="application/json" hidden />
+        <span>Import JSON</span>
+      </label>
+      <button id="btn-clear">Clear</button>
+      <button id="btn-save">Save (Local)</button>
+      <button id="btn-load">Load (Local)</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- Лява библиотека -->
+    <aside class="sidebar left">
+      <h2>Библиотека</h2>
+      <div class="palette">
+        <div class="palette-item" data-type="button">Button</div>
+        <div class="palette-item" data-type="toggle">Toggle</div>
+        <div class="palette-item" data-type="label">Label</div>
+        <div class="palette-item" data-type="panel">Panel</div>
+      </div>
+      <p class="hint">Drag & drop върху платното</p>
+    </aside>
+
+    <!-- Център: платно -->
+    <section id="canvas" class="canvas" aria-label="Workspace (Canvas)">
+      <div class="canvas-hint">Пусни елементи тук</div>
+    </section>
+
+    <!-- Дясно: свойства -->
+    <aside class="sidebar right">
+      <h2>Свойства</h2>
+      <form id="inspector" class="inspector" autocomplete="off">
+        <div class="empty">Няма избран елемент</div>
+
+        <div class="fields hidden">
+          <div class="row">
+            <label>ID</label>
+            <input type="text" id="prop-id" readonly />
+          </div>
+          <div class="row">
+            <label>Тип</label>
+            <input type="text" id="prop-type" readonly />
+          </div>
+          <div class="row">
+            <label>Текст</label>
+            <input type="text" id="prop-text" placeholder="Надпис на бутона/етикета" />
+          </div>
+          <div class="row two">
+            <div>
+              <label>X</label>
+              <input type="number" id="prop-x" />
+            </div>
+            <div>
+              <label>Y</label>
+              <input type="number" id="prop-y" />
+            </div>
+          </div>
+          <div class="row two">
+            <div>
+              <label>Ширина</label>
+              <input type="number" id="prop-w" />
+            </div>
+            <div>
+              <label>Височина</label>
+              <input type="number" id="prop-h" />
+            </div>
+          </div>
+          <div class="row">
+            <label>Размер шрифт</label>
+            <input type="number" id="prop-font" min="8" max="64" />
+          </div>
+
+          <div class="row" id="row-variant">
+            <label>Вариант</label>
+            <select id="prop-variant">
+              <option value="primary">Primary</option>
+              <option value="secondary">Secondary</option>
+              <option value="ghost">Ghost</option>
+              <option value="danger">Danger</option>
+            </select>
+          </div>
+
+          <div class="row">
+            <button type="button" id="prop-delete" class="danger">Изтрий елемента</button>
+          </div>
+        </div>
+      </form>
+    </aside>
+  </main>
+
+  <footer class="foot">
+    <small>Drag: задържи и мести · Resize: дръпни от ъглите · Snap: 10px · Multi‑save: LocalStorage</small>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
