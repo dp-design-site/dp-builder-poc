@@ -1,7 +1,8 @@
-<!-- ===================== js/core/inspector.js ===================== -->
-<script type="module" id="__inline_js_inspector">
+
 import { registry } from './js/core/widgets.js';
 import { state } from './js/core/canvas.js';
+
+<script type="module" id="__inline_js_inspector">
 
 const $=(s,r=document)=>r.querySelector(s); const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
 
