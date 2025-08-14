@@ -62,6 +62,27 @@ export function initCanvas() {
   });
 }
 
+// HTML5 drag & drop from palette to canvas
+export function initPaletteDnd(paletteRoot) {
+  if (!paletteRoot) return;
+  paletteRoot.querySelectorAll('.palette-item').forEach((it) => {
+    it.setAttribute('draggable', 'true');
+    it.addEventListener('dragstart', (e) => {
+      e.dataTransfer.setData('text/plain', it.dataset.type);
+    });
+  });
+  canvas().addEventListener('dragover', (e) => e.preventDefault());
+  canvas().addEventListener('drop', (e) => {
+    e.preventDefault();
+    const type = e.dataTransfer.getData('text/plain');
+    if (!type) return;
+    const rect = canvas().getBoundingClientRect();
+    const x = Math.round((e.clientX - rect.left) / GRID) * GRID;
+    const y = Math.round((e.clientY - rect.top) / GRID) * GRID;
+    createFromPalette(type, x, y);
+  });
+}
+
 export function createFromPalette(
   type,
   x = 60 + Math.random() * 80,
@@ -85,7 +106,10 @@ export function createFromPalette(
 }
 
 function wireInteract(el) {
-  interact(el).draggable({
+  // Use global interact from CDN if present
+  const ix = (typeof window !== 'undefined' && window.interact) ? window.interact : interact;
+
+  ix(el).draggable({
     listeners: {
       start() {
         state.dragStart.clear();
@@ -126,7 +150,7 @@ function wireInteract(el) {
     inertia: false,
   });
 
-  interact(el).resizable({
+  ix(el).resizable({
     edges: { left: true, right: true, top: true, bottom: true },
     inertia: false,
     listeners: {
@@ -439,4 +463,4 @@ export const alignAPI = {
     }),
 };
 
-export { getRect };
+export { getRect, initPaletteDnd };
