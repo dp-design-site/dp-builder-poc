@@ -1,7 +1,7 @@
 // core/widgets.js
 // Defines available widgets in the palette and their creation logic.
 
-import { addItemToCanvas } from './canvas.js';
+import { addItemToCanvas } from '../canvas.js';
 
 const widgetDefs = {
   button: {
