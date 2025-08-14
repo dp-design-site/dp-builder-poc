@@ -1,7 +1,9 @@
-<script type="module" id="__inline_js_do_not_edit">
+
 import { initCanvas, createFromPalette, serialize, deserialize, alignAPI, setSelection } from './js/core/canvas.js';
 import { buildPalette } from './js/core/widgets.js';
 import { initInspector } from './js/core/inspector.js';
+
+<script type="module" id="__inline_js_do_not_edit">
 
 // Palette
 buildPalette(document.getElementById('palette'), type => createFromPalette(type));
