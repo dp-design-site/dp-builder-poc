@@ -8,6 +8,7 @@ import {
   deserialize,
   alignAPI,
   setSelection,
+  initPaletteDnd,
 } from './core/canvas.js';
 
 import { buildPalette } from './core/widgets.js';
@@ -37,6 +38,8 @@ function bootstrap() {
   // Build palette
   const paletteRoot = document.getElementById('palette');
   buildPalette(paletteRoot, (type) => createFromPalette(type));
+  // Enable HTML5 drag & drop from palette
+  initPaletteDnd(paletteRoot);
 
   // Init canvas + inspector
   initCanvas();
