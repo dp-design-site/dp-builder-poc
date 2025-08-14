@@ -1,1 +1,49 @@
+<style id="__inline_css_do_not_edit">/* this block is only for canvas preview. In repo, put in css/main.css */
+:root{ --bg:#0f1115; --panel:#161a22; --panel-2:#1d2330; --text:#e8ecf2; --muted:#a8b0c2; --accent:#3ea6ff; --grid:rgba(255,255,255,0.06); --danger:#ff5d5d; --ok:#42d392; --guide:#66ccffaa; }
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Helvetica Neue, Arial;user-select:none}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--panel);border-bottom:1px solid #222839;position:sticky;top:0;z-index:10;gap:10px;flex-wrap:wrap}
+.brand{font-weight:700;letter-spacing:.3px}
+.actions,.alignbar{display:flex;gap:8px;flex-wrap:wrap}
+.btn,.file span{background:var(--panel-2);color:var(--text);border:1px solid #283149;padding:8px 10px;border-radius:10px;cursor:pointer}
+.btn.danger{background:#2a1820;border-color:#5c2332;color:#ffb3b3}
+.layout{display:grid;grid-template-columns:240px 1fr 320px;height:calc(100vh - 58px)}
+.sidebar{background:var(--panel);border-right:1px solid #222839;overflow:auto}
+.sidebar.right{border-right:none;border-left:1px solid #222839}
+.sidebar h2{margin:12px 12px 8px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px}
+.hint{color:var(--muted);margin:8px 12px 12px}
+.palette{display:grid;grid-template-columns:1fr;gap:8px;padding:0 12px 16px}
+.palette-item{padding:10px 12px;border-radius:10px;background:var(--panel-2);border:1px dashed #3a425e;cursor:grab;user-select:none;text-align:center}
+.palette-item:active{cursor:grabbing}
+.canvas{position:relative;background:linear-gradient(transparent 24px,var(--grid) 25px),linear-gradient(90deg,transparent 24px,var(--grid) 25px);background-size:25px 25px;overflow:auto}
+.canvas-hint{position:absolute;left:50%;top:30%;transform:translate(-50%,-50%);color:var(--muted)}
+.widget{position:absolute;display:flex;align-items:center;justify-content:center;padding:8px 10px;border-radius:12px;cursor:move;min-width:60px;min-height:36px;border:1px solid #39425e;background:#1b2232;touch-action:none}
+.widget.selected{outline:2px solid var(--accent);outline-offset:2px}
+.widget *{pointer-events:none}
+.widget button{all:unset;padding:8px 12px;border-radius:10px;text-align:center;cursor:pointer;border:1px solid #2a3350;background:#20273a;min-width:76px}
+.widget.label{background:transparent;border:1px dashed #2a3350;color:#cfd7e6}
+.widget.panel{background:#121722;border:1px solid #2a2f44}
+.widget .toggle{display:inline-block;padding:8px 12px;border-radius:999px;border:1px solid #2a3350;background:#20273a}
+.input-field{background:#0f141e;border:1px solid #2a3350;border-radius:8px;padding:6px 10px;color:#e8ecf2;min-width:120px}
+.checkbox{display:flex;align-items:center;gap:8px}
+.checkbox .box{width:18px;height:18px;border:1px solid #2a3350;border-radius:4px;background:#0f141e}
+.variant-primary{background:#1b3b5a;border-color:#275985}
+.variant-secondary{background:#2b2f3f;border-color:#3c445e}
+.variant-ghost{background:transparent;border-color:#3c445e}
+.variant-danger{background:#3a1f2a;border-color:#8b2a3b;color:#ffb3b3}
+.inspector{padding:12px}
+.inspector .section{border:1px solid #2a2f44;border-radius:12px;background:#141a28;margin-bottom:12px}
+.inspector .section > h3{margin:0;padding:10px 12px;border-bottom:1px solid #222b40;color:#a8b0c2;font-size:12px;text-transform:uppercase;letter-spacing:.6px}
+.inspector .rows{padding:10px 12px;display:grid;gap:8px}
+.row{display:grid;grid-template-columns:120px 1fr;gap:10px;align-items:center}
+.row input,.row select{background:var(--panel-2);color:var(--text);border:1px solid #2b3550;border-radius:10px;padding:8px 10px}
+.row .swatch{display:flex;gap:8px}
+.row .swatch input[type=color]{width:40px;height:28px;padding:0;border:none;background:transparent}
+.guide{position:absolute;background:var(--guide);z-index:5;pointer-events:none}
+.guide.v{width:1px;top:0;bottom:0}
+.guide.h{height:1px;left:0;right:0}
+.marquee{position:absolute;border:1px dashed var(--accent);background:rgba(62,166,255,.08);pointer-events:none;z-index:8}
+.foot{padding:8px 14px;color:var(--muted);border-top:1px solid #222839;background:var(--panel)}
+</style>
 
