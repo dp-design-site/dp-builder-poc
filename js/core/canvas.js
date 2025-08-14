@@ -463,4 +463,4 @@ export const alignAPI = {
     }),
 };
 
-export { getRect, initPaletteDnd };
+export { getRect };
