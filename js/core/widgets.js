@@ -68,3 +68,4 @@ export function buildPalette(root, onAdd){
     root.appendChild(it);
   }
 }
+
