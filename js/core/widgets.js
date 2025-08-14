@@ -1,4 +1,3 @@
-<!-- ===================== js/core/widgets.js ===================== -->
 <script type="module" id="__inline_js_widgets">
 // Widget registry + DOM factories + default properties
 export const registry = {
