@@ -1,11 +1,12 @@
-<!-- ===================== index.html ===================== -->
 <!doctype html>
 <html lang="bg">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DP Configurator Builder – Modular MVP</title>
+  <title>DP Configurator Builder – Modular</title>
+  <!-- Styles -->
   <link rel="stylesheet" href="css/main.css" />
+  <!-- Interact.js for drag & resize -->
   <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
 </head>
 <body>
@@ -57,6 +58,7 @@
     <small>Drag/Resize (snap 10px) · Smart guides · Multi‑select (Shift+Click или правоъгълник) · Duplicate: Ctrl+D</small>
   </footer>
 
+  <!-- App entry (ES modules) - keep as the last tag so the DOM exists before JS runs -->
   <script type="module" src="js/app.js"></script>
 </body>
 </html>
