@@ -1,7 +1,8 @@
-<!-- ===================== js/core/canvas.js ===================== -->
-<script type="module" id="__inline_js_canvas">
+
 import { registry } from './js/core/widgets.js';
 import { mountInspectorForSelection, clearInspector } from './js/core/inspector.js';
+
+<script type="module" id="__inline_js_canvas">
 
 const GRID=10, SNAP_TOL=6;
 const canvas = () => document.getElementById('canvas');
