@@ -66,3 +66,14 @@ body {
   height: 25px; /* фиксирана височина, можеш да я коригираш */
 }
 
+#marquee {
+  pointer-events: none;
+  border-radius: 6px;
+  transition: none;
+}
+.widget.selected {
+  box-shadow: 0 0 0 3px #3ea6ff, 0 6px 24px #0002;
+  border-color: #36c4f5;
+}
+
+
