@@ -1,66 +1,74 @@
-<!doctype html>
-<html lang="bg">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DP Configurator Builder – Modular</title>
-  <!-- Styles -->
-  <link rel="stylesheet" href="css/main.css" />
-  <!-- Interact.js for drag & resize -->
-  <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
-  <link rel="icon" href="favicon.png" type="image/png">
-
+  <meta charset="UTF-8">
+  <title>Simple Interact.js Drag Demo</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body { background: #161a22; margin: 0; height: 100vh; }
+    #canvas {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+      overflow: hidden;
+      background: repeating-linear-gradient(
+        to right, #232736 0, #232736 24px, #262b40 25px
+      ),
+      repeating-linear-gradient(
+        to bottom, #232736 0, #232736 24px, #262b40 25px
+      );
+    }
+    .widget {
+      position: absolute;
+      left: 120px;
+      top: 100px;
+      width: 260px;
+      height: 160px;
+      border-radius: 12px;
+      border: 2px solid #2a2f44;
+      background: #121722;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      cursor: move;
+      user-select: none;
+      box-shadow: 0 4px 18px #0002;
+    }
+  </style>
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand">DP Configurator Builder · Modular</div>
-    <div class="actions">
-      <button id="btn-export" class="btn">Export JSON</button>
-      <label class="file btn">
-        <input id="file-import" type="file" accept="application/json" hidden />
-        <span>Import JSON</span>
-      </label>
-      <button id="btn-clear" class="btn">Clear</button>
-      <button id="btn-save" class="btn">Save (Local)</button>
-      <button id="btn-load" class="btn">Load (Local)</button>
-    </div>
-    <div class="alignbar">
-      <button class="btn" id="align-left">Align Left</button>
-      <button class="btn" id="align-right">Align Right</button>
-      <button class="btn" id="align-top">Align Top</button>
-      <button class="btn" id="align-bottom">Align Bottom</button>
-      <button class="btn" id="align-vcenter">V Center</button>
-      <button class="btn" id="align-hcenter">H Center</button>
-      <button class="btn" id="distribute-h">Distribute H</button>
-      <button class="btn" id="distribute-v">Distribute V</button>
-    </div>
-  </header>
+  <div id="canvas">
+    <div class="widget" id="myPanel">Панел (драгни ме)</div>
+  </div>
 
-  <main class="layout">
-    <aside class="sidebar left">
-      <h2>Библиотека</h2>
-      <div id="palette" class="palette"></div>
-      <p class="hint">Drag & drop върху платното или клик за добавяне</p>
-    </aside>
+  <!-- Interact.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
+  <script>
+    // Минимална интеракция само за drag!
+    interact('.widget').draggable({
+      listeners: {
+        move (event) {
+          const target = event.target;
+          // Вземи текущите x/y
+          let x = parseInt(target.getAttribute('data-x')) || 0;
+          let y = parseInt(target.getAttribute('data-y')) || 0;
 
-    <section id="canvas" class="canvas" aria-label="Workspace (Canvas)">
-      <div class="canvas-hint">Пусни елементи тук</div>
-      <div id="guide-v" class="guide v" style="display:none"></div>
-      <div id="guide-h" class="guide h" style="display:none"></div>
-      <div id="marquee" class="marquee" style="display:none"></div>
-    </section>
+          // Добави разликата
+          x += event.dx;
+          y += event.dy;
 
-    <aside class="sidebar right">
-      <h2>Свойства</h2>
-      <form id="inspector" class="inspector" autocomplete="off"></form>
-    </aside>
-  </main>
+          // Ъпдейтни позицията
+          target.style.transform = `translate(${x}px, ${y}px)`;
+          target.setAttribute('data-x', x);
+          target.setAttribute('data-y', y);
 
-  <footer class="foot">
-    <small>Drag/Resize (snap 10px) · Smart guides · Multi‑select (Shift+Click или правоъгълник) · Duplicate: Ctrl+D</small>
-  </footer>
-
-  <!-- App entry (ES modules) - keep as the last tag so the DOM exists before JS runs -->
-  <script type="module" src="js/app.js"></script>
+          // Debug log
+          console.log('DRAG MOVE SIMPLE', x, y);
+        }
+      }
+    });
+  </script>
 </body>
 </html>
