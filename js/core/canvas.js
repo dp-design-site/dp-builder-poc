@@ -106,6 +106,13 @@ export function createFromPalette(
 }
 
 function wireInteract(el) {
+  el.addEventListener('pointerdown', (e) => {
+  console.log('POINTERDOWN on widget', el.dataset.id, e);
+});
+el.addEventListener('click', (e) => {
+  console.log('CLICK on widget', el.dataset.id, e);
+});
+
   // Prefer Interact.js from CDN if available
   const ix = (typeof window !== 'undefined' && window.interact) ? window.interact : null;
 
