@@ -98,6 +98,7 @@ function smartSnap(target, nx, ny, event = {}) {
     }
 
     // Във vertical snap:
+    if (SNAP_CENTERS) {
       for (const [txName, tx] of [['left', tr.left], ['centerX', tr.centerX], ['right', tr.right]]) {
         for (const ox of [or.left, or.centerX, or.right]) {
           if (Math.abs((nx + (tx - tr.left)) - ox) < SNAP_TOL) {
@@ -107,7 +108,7 @@ function smartSnap(target, nx, ny, event = {}) {
           }
         }
       }
-
+    }
 
     // Horizontal snap (top, center, bottom)
     if (SNAP_EDGES) {
