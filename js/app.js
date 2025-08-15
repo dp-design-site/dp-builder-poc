@@ -186,14 +186,23 @@ document.addEventListener('DOMContentLoaded', () => {
   let marqueeStart = {x:0, y:0};
   let marqueeType = 'normal'; // left-right или right-left
 
+  // НОВО: без подскачане през widget-и
+  function setMarqueeDragging(dragging) {
+    if (dragging) {
+      document.body.classList.add('marquee-dragging');
+    } else {
+      document.body.classList.remove('marquee-dragging');
+    }
+  }
+
   canvas.addEventListener('mousedown', function(e) {
     if (e.button !== 0) return;
     if (e.target.classList.contains('widget')) return;
-    // Clear selection ако не започваш marquee (само click)
     if (!e.shiftKey && !e.ctrlKey) {
       for (const w of document.querySelectorAll('.widget.selected')) w.classList.remove('selected');
     }
     marqueeActive = true;
+    setMarqueeDragging(true); // НОВО
     marqueeStart = { x: e.offsetX, y: e.offsetY };
     marquee.style.left = marqueeStart.x + 'px';
     marquee.style.top = marqueeStart.y + 'px';
@@ -203,9 +212,6 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   canvas.addEventListener('mousemove', function(e) {
-    // ... в началото на marquee drag ...
-    document.body.classList.add('marquee-dragging');
-
     if (!marqueeActive) return;
     const x = e.offsetX, y = e.offsetY;
     const left = Math.min(marqueeStart.x, x);
@@ -222,7 +228,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const wy = parseFloat(w.getAttribute('data-y')) || 0;
       const ww = w.offsetWidth, wh = w.offsetHeight;
       if (marqueeType === 'left-right') {
-        // Само напълно вътре
         if (
           wx >= left && wx + ww <= left + width &&
           wy >= top && wy + wh <= top + height
@@ -232,7 +237,6 @@ document.addEventListener('DOMContentLoaded', () => {
           w.classList.remove('selected');
         }
       } else {
-        // Всичко, което пресича
         if (
           wx < left + width && wx + ww > left &&
           wy < top + height && wy + wh > top
@@ -248,22 +252,21 @@ document.addEventListener('DOMContentLoaded', () => {
   canvas.addEventListener('mouseup', function(e) {
     if (!marqueeActive) return;
     marqueeActive = false;
+    setMarqueeDragging(false); // НОВО
     marquee.style.display = 'none';
-    // ... когато приключи marquee ...
-    document.body.classList.remove('marquee-dragging');
-
   });
 
-  // Escape - clear selection
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
       for (const w of document.querySelectorAll('.widget.selected')) w.classList.remove('selected');
       marqueeActive = false;
+      setMarqueeDragging(false); // НОВО
       marquee.style.display = 'none';
     }
   });
 
-  // SHIFT селекция + клик по widget
+  // === MULTI-DRAG с дълго задържане ===
+  let dragTimer = null, dragStarted = false;
   for (const widget of document.querySelectorAll('.widget')) {
     widget.addEventListener('mousedown', e => {
       if (e.button !== 0) return;
@@ -271,8 +274,39 @@ document.addEventListener('DOMContentLoaded', () => {
       if (e.shiftKey) {
         widget.classList.toggle('selected');
       } else {
-        for (const w of document.querySelectorAll('.widget.selected')) w.classList.remove('selected');
-        widget.classList.add('selected');
+        // Ако вече има мулти-селекция и този е част от нея, стартирай multi-drag със задържане!
+        const selected = document.querySelectorAll('.widget.selected');
+        if (selected.length > 1 && widget.classList.contains('selected')) {
+          dragStarted = false;
+          dragTimer = setTimeout(() => {
+            dragStarted = true;
+            // Симулираме drag start чрез dispatchEvent, ако искаш може да покажеш и outline
+          }, 200);
+          // Ако започне да се движи (mousemove) – стартирай веднага
+          const moveHandler = () => {
+            if (dragTimer) {
+              clearTimeout(dragTimer); dragTimer = null;
+              dragStarted = true;
+            }
+            window.removeEventListener('mousemove', moveHandler);
+          };
+          window.addEventListener('mousemove', moveHandler);
+
+          // При mouseup – ако не е dragStarted, селектирай само този
+          const upHandler = () => {
+            if (!dragStarted) {
+              for (const w of document.querySelectorAll('.widget.selected')) w.classList.remove('selected');
+              widget.classList.add('selected');
+            }
+            window.removeEventListener('mouseup', upHandler);
+            window.removeEventListener('mousemove', moveHandler);
+            if (dragTimer) clearTimeout(dragTimer);
+          };
+          window.addEventListener('mouseup', upHandler);
+        } else {
+          for (const w of document.querySelectorAll('.widget.selected')) w.classList.remove('selected');
+          widget.classList.add('selected');
+        }
       }
       e.stopPropagation();
     });
@@ -349,7 +383,7 @@ document.addEventListener('DOMContentLoaded', () => {
               for (const [txName, tx] of [['left', tr.left], ['right', tr.right]]) {
                 for (const ox of [or.left, or.right]) {
                   if (Math.abs(tx - ox) < SNAP_TOL) {
-                    if (txName === 'left')   { snappedX = ox; snappedW = tr.right - ox; vGuide = true; vGuidePos = ox; }
+                   if (txName === 'left')   { snappedX = ox; snappedW = tr.right - ox; vGuide = true; vGuidePos = ox; }
                     if (txName === 'right')  { snappedW = ox - tr.left; vGuide = true; vGuidePos = ox; }
                   }
                 }
@@ -382,31 +416,3 @@ document.addEventListener('DOMContentLoaded', () => {
             if (SNAP_CENTERS) {
               for (const [tyName, ty] of [['centerY', tr.centerY]]) {
                 for (const oy of [or.centerY]) {
-                 if (Math.abs(ty - oy) < SNAP_TOL) {
-                    const newY = oy - (tr.bottom - tr.top)/2;
-                    snappedY = newY;
-                    snappedH = tr.bottom - tr.top;
-                    hGuide = true; hGuidePos = oy;
-                  }
-                }
-              }
-            }
-          } 
-        }
-        event.target.style.transform = `translate(${snappedX}px, ${snappedY}px)`;
-        event.target.setAttribute('data-x', snappedX);
-        event.target.setAttribute('data-y', snappedY);
-        event.target.style.width  = Math.max(40, snappedW) + 'px';
-        event.target.style.height = Math.max(40, snappedH) + 'px';
-
-        if (vGuide && vGuidePos !== null) showGuide('v', vGuidePos);
-        else document.getElementById('guide-v').style.display = 'none';
-        if (hGuide && hGuidePos !== null) showGuide('h', hGuidePos);
-        else document.getElementById('guide-h').style.display = 'none';
-      },
-      end () {
-        hideGuides();
-      }
-    }
-  });
-});
