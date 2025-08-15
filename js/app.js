@@ -1,4 +1,4 @@
-let SNAP_TOL = 2;
+let SNAP_TOL = 8;
 let SNAP_ENABLED = true;
 let SNAP_EDGES = true;
 let SNAP_CENTERS = true;
@@ -32,13 +32,13 @@ function showGuide(axis, pos) {
     guide.style.top = pos + 'px';
     guide.style.display = 'block';
   }
-  updateGuideStyles(); // винаги обновявай стиловете!
+  updateGuideStyles();
 }
 
 function updateGuideStyles() {
   const style = document.getElementById('guide-style')?.value || 'solid';
-  const color = document.getElementById('guide-color')?.value || '#38A7DA';
-  const width = document.getElementById('guide-width')?.value || 0.5;
+  const color = document.getElementById('guide-color')?.value || '#37bcff';
+  const width = document.getElementById('guide-width')?.value || 2;
   for (const id of ['guide-v', 'guide-h']) {
     const guide = document.getElementById(id);
     // Style: dashed, dotted, solid
@@ -97,18 +97,6 @@ function smartSnap(target, nx, ny, event = {}) {
       }
     }
 
-        // Във vertical snap:
-    for (const [txName, tx] of [['left', tr.left], ['centerX', tr.centerX], ['right', tr.right]]) {
-      for (const ox of [or.left, or.centerX, or.right]) {
-        if (Math.abs((nx + (tx - tr.left)) - ox) < SNAP_TOL) {
-          snappedX = ox - (tx - tr.left);
-          vGuide = true;
-          vGuidePos = snappedX + (tx - tr.left);
-        }
-      }
-    }
-
-
     // Horizontal snap (top, center, bottom)
     if (SNAP_EDGES) {
       for (const [tyName, ty] of [['top', tr.top], ['bottom', tr.bottom]]) {
@@ -142,9 +130,9 @@ function smartSnap(target, nx, ny, event = {}) {
   return { x: snappedX, y: snappedY };
 }
 
-// === Snapbar logic ===
+// === SNAPBAR логика + COLOR HEX синхронизация ===
 document.addEventListener('DOMContentLoaded', () => {
-  // --- СИНХРОНИЗАЦИЯ COLOR PICKER + HEX ---
+  // --- Color picker + hex sync ---
   const colorPicker = document.getElementById('guide-color');
   const colorHex = document.getElementById('guide-color-hex');
   if (colorPicker && colorHex) {
@@ -161,9 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
-  // Guide style update
   updateGuideStyles();
-  // Snap enable
   document.getElementById('snap-enable')?.addEventListener('change', e => {
     SNAP_ENABLED = !!e.target.checked;
   });
@@ -180,7 +166,71 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById(id)?.addEventListener('input', updateGuideStyles);
   }
 
-  // Drag/resize init
+  // === MARQUEE SELECTION LOGIC ===
+  const canvas = document.getElementById('canvas');
+  const marquee = document.getElementById('marquee');
+  let marqueeActive = false;
+  let marqueeStart = {x:0, y:0};
+
+  canvas.addEventListener('mousedown', function(e) {
+    // Ignore right click
+    if (e.button !== 0) return;
+    // Ignore click on widget
+    if (e.target.classList.contains('widget')) return;
+    marqueeActive = true;
+    marqueeStart = { x: e.offsetX, y: e.offsetY };
+    marquee.style.left = marqueeStart.x + 'px';
+    marquee.style.top = marqueeStart.y + 'px';
+    marquee.style.width = marquee.style.height = '0px';
+    marquee.style.display = 'block';
+  });
+  canvas.addEventListener('mousemove', function(e) {
+    if (!marqueeActive) return;
+    const x = e.offsetX, y = e.offsetY;
+    const left = Math.min(marqueeStart.x, x);
+    const top = Math.min(marqueeStart.y, y);
+    const width = Math.abs(marqueeStart.x - x);
+    const height = Math.abs(marqueeStart.y - y);
+    marquee.style.left = left + 'px';
+    marquee.style.top = top + 'px';
+    marquee.style.width = width + 'px';
+    marquee.style.height = height + 'px';
+    for (const w of document.querySelectorAll('.widget')) {
+      const wx = parseFloat(w.getAttribute('data-x')) || 0;
+      const wy = parseFloat(w.getAttribute('data-y')) || 0;
+      const ww = w.offsetWidth, wh = w.offsetHeight;
+      if (
+        wx < left + width && wx + ww > left &&
+        wy < top + height && wy + wh > top
+      ) {
+        w.classList.add('selected');
+      } else {
+        w.classList.remove('selected');
+      }
+    }
+  });
+  canvas.addEventListener('mouseup', function(e) {
+    if (!marqueeActive) return;
+    marqueeActive = false;
+    marquee.style.display = 'none';
+  });
+
+  // === SHIFT селекция + клик по widget ===
+  for (const widget of document.querySelectorAll('.widget')) {
+    widget.addEventListener('mousedown', e => {
+      if (e.button !== 0) return;
+      if (e.shiftKey) {
+        widget.classList.toggle('selected');
+      } else {
+        // Ако не е shift – изчисти всички други selection
+        for (const w of document.querySelectorAll('.widget.selected')) w.classList.remove('selected');
+        widget.classList.add('selected');
+      }
+      e.stopPropagation();
+    });
+  }
+
+  // === DRAG/RESIZE с MULTI-SELECTION ===
   interact('.widget').draggable({
     listeners: {
       move (event) {
@@ -192,7 +242,19 @@ document.addEventListener('DOMContentLoaded', () => {
         // --- SNAPPING ---
         const snapped = smartSnap(target, x, y, event);
         x = snapped.x; y = snapped.y;
-
+        // === MULTI-SELECTION MOVE ===
+        if (target.classList.contains('selected')) {
+          for (const w of document.querySelectorAll('.widget.selected')) {
+            if (w === target) continue;
+            let wx = parseFloat(w.getAttribute('data-x')) || 0;
+            let wy = parseFloat(w.getAttribute('data-y')) || 0;
+            wx += event.dx;
+            wy += event.dy;
+            w.style.transform = `translate(${wx}px, ${wy}px)`;
+            w.setAttribute('data-x', wx);
+            w.setAttribute('data-y', wy);
+          }
+        }
         target.style.transform = `translate(${x}px, ${y}px)`;
         target.setAttribute('data-x', x);
         target.setAttribute('data-y', y);
@@ -221,7 +283,6 @@ document.addEventListener('DOMContentLoaded', () => {
         y += event.deltaRect.top;
 
         // --- SNAPPING ---
-        // Правим временно нов getRect:
         const w = event.rect.width;
         const h = event.rect.height;
         const tr = {
