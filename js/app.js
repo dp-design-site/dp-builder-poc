@@ -14,6 +14,26 @@ import {
 import { buildPalette } from './core/widgets.js';
 import { initInspector } from './core/inspector.js';
 
+// ===== Interact.js DELEGATE глобална инициализация =====
+function setupInteractDelegated() {
+  if (window.interact && !window._interactInit) {
+    window.interact('.widget').draggable({
+      listeners: {
+        start(event)  { console.log('DRAG START (delegate)', event); },
+        move(event)   { console.log('DRAG MOVE (delegate)', event); },
+        end(event)    { console.log('DRAG END (delegate)', event); }
+      }
+    });
+    window.interact('.widget').resizable({
+      edges: { left: true, right: true, top: true, bottom: true },
+      listeners: {
+        move(event) { console.log('RESIZE (delegate)', event); }
+      }
+    });
+    window._interactInit = true;
+  }
+}
+
 // ------- Utilities -------
 function toast(msg) {
   const t = document.createElement('div');
@@ -44,6 +64,9 @@ function bootstrap() {
   // Init canvas + inspector
   initCanvas();
   initInspector();
+
+  // === Инициализирай Interact.js (delegate) ===
+  setupInteractDelegated();
 
   // Top actions
   const btnExport = document.getElementById('btn-export');
