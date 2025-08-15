@@ -1,4 +1,4 @@
-let SNAP_TOL = 8;
+let SNAP_TOL = 2;
 let SNAP_ENABLED = true;
 let SNAP_EDGES = true;
 let SNAP_CENTERS = true;
