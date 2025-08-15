@@ -106,15 +106,7 @@ export function createFromPalette(
 }
 
 function wireInteract(el) {
-  console.log('ix:', ix, 'el:', el);
-try {
-  const inter = ix && ix(el);
-  console.log('ix(el):', inter);
-} catch (e) {
-  console.log('ix(el) ERROR:', e);
-}
-
-  el.addEventListener('pointerdown', (e) => {
+   el.addEventListener('pointerdown', (e) => {
   console.log('POINTERDOWN on widget', el.dataset.id, e);
 });
 el.addEventListener('click', (e) => {
@@ -123,6 +115,14 @@ el.addEventListener('click', (e) => {
 
   // Prefer Interact.js from CDN if available
   const ix = (typeof window !== 'undefined' && window.interact) ? window.interact : null;
+
+  console.log('ix:', ix, 'el:', el); // <-- вече ix е дефинирана!
+  try {
+    const inter = ix && ix(el);
+    console.log('ix(el):', inter);
+  } catch (e) {
+    console.log('ix(el) ERROR:', e);
+  }
 
   if (ix) {
     ix(el).draggable({
