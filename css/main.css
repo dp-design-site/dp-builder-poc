@@ -76,4 +76,7 @@ body {
   border-color: #36c4f5;
 }
 
+body.marquee-dragging .widget {
+  pointer-events: none !important;
+}
 
