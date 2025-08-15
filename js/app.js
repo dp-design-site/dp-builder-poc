@@ -9,8 +9,11 @@ function allWidgets(except = null) {
 }
 
 function getRect(el) {
-  const x = parseInt(el.getAttribute('data-x')) || 0;
-  const y = parseInt(el.getAttribute('data-y')) || 0;
+  // x и y са относително към canvas!
+  const canvasRect = document.getElementById('canvas').getBoundingClientRect();
+  const elRect = el.getBoundingClientRect();
+  const x = elRect.left - canvasRect.left;
+  const y = elRect.top - canvasRect.top;
   const w = el.offsetWidth, h = el.offsetHeight;
   return {
     left: x, right: x + w, top: y, bottom: y + h,
@@ -19,22 +22,25 @@ function getRect(el) {
 }
 
 
+
 function hideGuides() {
   document.getElementById('guide-v').style.display = 'none';
   document.getElementById('guide-h').style.display = 'none';
 }
 
 function showGuide(axis, pos) {
+  const canvasRect = document.getElementById('canvas').getBoundingClientRect();
   if (axis === 'v') {
     const guide = document.getElementById('guide-v');
-    guide.style.left = pos + 'px';
+    guide.style.left = (pos) + 'px';
     guide.style.display = 'block';
   } else {
     const guide = document.getElementById('guide-h');
-    guide.style.top = pos + 'px';
+    guide.style.top = (pos) + 'px';
     guide.style.display = 'block';
   }
 }
+
 
 function smartSnap(target, nx, ny) {
   const tr = getRect(target);
