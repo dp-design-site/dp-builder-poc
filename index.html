@@ -13,6 +13,24 @@
     <div id="guide-v"></div>
     <div id="guide-h"></div>
   </div>
+
+  <div class="snapbar">
+  <label><input type="checkbox" id="snap-enable" checked> Snap</label>
+  <label><input type="checkbox" id="snap-edges" checked> Edges</label>
+  <label><input type="checkbox" id="snap-centers" checked> Centers</label>
+  <label>Snap Tol: <input type="range" id="snap-tolerance" min="2" max="32" value="8"></label>
+  <label>Style: 
+    <select id="guide-style">
+      <option value="solid">Solid</option>
+      <option value="dotted">Dotted</option>
+      <option value="dashed">Dashed</option>
+    </select>
+  </label>
+  <input type="color" id="guide-color" value="#37bcff">
+  <label>Width: <input type="number" id="guide-width" min="1" max="8" value="2" style="width:40px"></label>
+</div>
+
+  
   <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
   <script type="module" src="js/app.js"></script>
 </body>
