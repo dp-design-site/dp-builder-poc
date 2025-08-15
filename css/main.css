@@ -15,13 +15,10 @@ body {
   repeating-linear-gradient(
     to bottom, #232736 0, #232736 24px, #262b40 25px
   );
+  overflow: hidden;
 }
 .widget {
   position: absolute;
-  left: 320px;
-  top: 180px;
-  width: 300px;
-  height: 150px;
   background: #232c40;
   border-radius: 14px;
   box-shadow: 0 6px 24px #0002;
@@ -33,4 +30,19 @@ body {
   justify-content: center;
   cursor: move;
   user-select: none;
+  /* no left/top! */
+}
+#guide-v, #guide-h {
+  display: none;
+  position: absolute;
+  z-index: 999;
+  background: #37bcff;
+}
+#guide-v {
+  width: 2px; height: 100%;
+  top: 0; left: 0;
+}
+#guide-h {
+  height: 2px; width: 100%;
+  left: 0; top: 0;
 }
