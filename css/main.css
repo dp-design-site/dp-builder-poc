@@ -33,7 +33,7 @@ body {
   /* no left/top! */
 }
 #guide-v, #guide-h {
-  background: #B3BECE;
+  background: #38A7DA;
   width: 0.5px; height: 100%;
   position: absolute;
   display: none;
@@ -42,11 +42,9 @@ body {
 }
 
 #guide-v {
-  width: 2px; height: 100%;
   top: 0; left: 0;
 }
 #guide-h {
-  height: 2px; width: 100%;
   left: 0; top: 0;
 }
 
