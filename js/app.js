@@ -276,6 +276,19 @@ document.addEventListener('DOMContentLoaded', () => {
       marquee.style.display = 'none';
     }
   });
+// Пример: показване на context меню при десен бутон върху canvas
+canvas.addEventListener('contextmenu', function(e) {
+  e.preventDefault();
+  showContextMenu(e.pageX, e.pageY, [
+    { label: 'Group', shortcut: 'Ctrl+G', action: groupSelected },
+    { label: 'Ungroup', shortcut: 'Ctrl+Shift+G', action: ungroupSelected },
+    'separator',
+    { label: 'Copy', shortcut: 'Ctrl+C', action: copySelected },
+    { label: 'Paste', shortcut: 'Ctrl+V', action: pasteClipboard },
+    { label: 'Duplicate', shortcut: 'Ctrl+D', action: duplicateSelected },
+    { label: 'Delete', shortcut: 'Del', action: deleteSelected }
+  ]);
+});
 
   // === MULTI-DRAG с дълго задържане ===
   let dragTimer = null, dragStarted = false;
