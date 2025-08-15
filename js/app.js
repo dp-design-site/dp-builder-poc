@@ -63,20 +63,18 @@ function updateGuideStyles() {
 }
 
 function smartSnap(target, nx, ny, event = {}) {
-  const ignoreSelected = target.classList.contains('selected');
-  for (const other of allWidgets(target, ignoreSelected)) {
   if (!SNAP_ENABLED || event.shiftKey) {
     hideGuides();
     return { x: nx, y: ny };
   }
+  const ignoreSelected = target.classList.contains('selected');
   const tr = getRect(target);
   let snappedX = nx, snappedY = ny;
   let vGuide = null, hGuide = null;
   let vGuidePos = null, hGuidePos = null;
 
-  for (const other of allWidgets(target)) {
-    const ignoreSelected = target.classList.contains('selected');
-    for (const other of allWidgets(target, ignoreSelected)) {
+  for (const other of allWidgets(target, ignoreSelected)) {
+    const or = getRect(other);
 
     // Vertical snap (left, center, right)
     if (SNAP_EDGES) {
@@ -90,7 +88,6 @@ function smartSnap(target, nx, ny, event = {}) {
         }
       }
     }
-  
     if (SNAP_CENTERS) {
       for (const [txName, tx] of [['centerX', tr.centerX]]) {
         for (const ox of [or.centerX]) {
@@ -101,23 +98,7 @@ function smartSnap(target, nx, ny, event = {}) {
           }
         }
       }
-    }
-
-    // Във vertical snap:
-    if (SNAP_CENTERS) {
-      for (const [txName, tx] of [['left', tr.left], ['centerX', tr.centerX], ['right', tr.right]]) {
-        for (const ox of [or.left, or.centerX, or.right]) {
-          if (Math.abs((nx + (tx - tr.left)) - ox) < SNAP_TOL) {
-            snappedX = ox - (tx - tr.left);
-            vGuide = true;
-            vGuidePos = snappedX + (tx - tr.left);
-          }
-        }
-      }
-    }
-
-    // Във vertical snap:
-    if (SNAP_CENTERS) {
+      // Във vertical snap:
       for (const [txName, tx] of [['left', tr.left], ['centerX', tr.centerX], ['right', tr.right]]) {
         for (const ox of [or.left, or.centerX, or.right]) {
           if (Math.abs((nx + (tx - tr.left)) - ox) < SNAP_TOL) {
@@ -160,7 +141,6 @@ function smartSnap(target, nx, ny, event = {}) {
   else document.getElementById('guide-h').style.display = 'none';
 
   return { x: snappedX, y: snappedY };
-}
 }
 
 // === SNAPBAR логика + COLOR HEX синхронизация ===
