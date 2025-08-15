@@ -158,6 +158,18 @@ function smartSnap(target, nx, ny, event = {}) {
 
 // === SNAPBAR логика + COLOR HEX синхронизация ===
 document.addEventListener('DOMContentLoaded', () => {
+
+  document.addEventListener('keydown', function(e) {
+    // Delete или Backspace (когато няма input/textarea фокус)
+    if ((e.key === 'Delete' || e.key === 'Backspace') && document.activeElement === document.body) {
+      for (const w of document.querySelectorAll('.widget.selected')) {
+        w.remove();
+      }
+      // Ако имаш inspector или друго, може да го затвориш тук
+      e.preventDefault();
+    }
+  });
+
   // --- Color picker + hex sync ---
   const colorPicker = document.getElementById('guide-color');
   const colorHex = document.getElementById('guide-color-hex');
