@@ -2,6 +2,7 @@
 
 // Универсална loader функция с Promise!
 function loadComponent(selector, url) {
+  window.loadComponent = loadComponent; // <-- Добави този ред!
   return new Promise(async (resolve, reject) => {
     const mount = document.querySelector(selector);
     if (!mount) return reject();
