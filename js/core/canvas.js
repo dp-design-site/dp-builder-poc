@@ -106,81 +106,124 @@ export function createFromPalette(
 }
 
 function wireInteract(el) {
-  // Use global interact from CDN if present
-  const ix = (typeof window !== 'undefined' && window.interact) ? window.interact : interact;
+  // Prefer Interact.js from CDN if available
+  const ix = (typeof window !== 'undefined' && window.interact) ? window.interact : null;
 
-  ix(el).draggable({
-    listeners: {
-      start() {
-        state.dragStart.clear();
-        const ids = state.selection.has(el.dataset.id)
-          ? [...state.selection]
-          : [el.dataset.id];
-        for (const id of ids) {
-          const w = $(`.widget[data-id="${id}"]`, canvas());
-          state.dragStart.set(id, {
-            x: parseInt(w.style.left || '0', 10),
-            y: parseInt(w.style.top || '0', 10),
-          });
-        }
-        hideGuides();
+  if (ix) {
+    ix(el).draggable({
+      listeners: {
+        start() {
+          state.dragStart.clear();
+          const ids = state.selection.has(el.dataset.id)
+            ? [...state.selection]
+            : [el.dataset.id];
+          for (const id of ids) {
+            const w = $(`.widget[data-id="${id}"]`, canvas());
+            state.dragStart.set(id, {
+              x: parseInt(w.style.left || '0', 10),
+              y: parseInt(w.style.top || '0', 10),
+            });
+          }
+          hideGuides();
+        },
+        move(evt) {
+          const ids = state.selection.has(el.dataset.id)
+            ? [...state.selection]
+            : [el.dataset.id];
+          const start = state.dragStart.get(el.dataset.id);
+          let nx = Math.round((start.x + evt.dx) / GRID) * GRID;
+          let ny = Math.round((start.y + evt.dy) / GRID) * GRID;
+          const snapped = smartGuides(el, nx, ny);
+          nx = snapped.x; ny = snapped.y;
+          for (const id of ids) {
+            const w = $(`.widget[data-id="${id}"]`, canvas());
+            const s = state.dragStart.get(id);
+            w.style.left = s.x + (nx - start.x) + 'px';
+            w.style.top  = s.y + (ny - start.y) + 'px';
+          }
+          if (state.selection.size === 1) mountInspectorForSelection();
+        },
+        end() { hideGuides(); },
       },
-      move(evt) {
-        const ids = state.selection.has(el.dataset.id)
-          ? [...state.selection]
-          : [el.dataset.id];
-        const start = state.dragStart.get(el.dataset.id);
-        let nx = Math.round((start.x + evt.dx) / GRID) * GRID;
-        let ny = Math.round((start.y + evt.dy) / GRID) * GRID;
-        const snapped = smartGuides(el, nx, ny);
-        nx = snapped.x;
-        ny = snapped.y;
-        for (const id of ids) {
-          const w = $(`.widget[data-id="${id}"]`, canvas());
-          const s = state.dragStart.get(id);
-          w.style.left = s.x + (nx - start.x) + 'px';
-          w.style.top = s.y + (ny - start.y) + 'px';
-        }
-        if (state.selection.size === 1) mountInspectorForSelection();
-      },
-      end() {
-        hideGuides();
-      },
-    },
-    inertia: false,
-  });
+      inertia: false,
+    });
 
-  ix(el).resizable({
-    edges: { left: true, right: true, top: true, bottom: true },
-    inertia: false,
-    listeners: {
-      move(evt) {
-        const t = evt.target;
-        let w = Math.max(40, Math.round(evt.rect.width / GRID) * GRID);
-        let h = Math.max(30, Math.round(evt.rect.height / GRID) * GRID);
-        t.style.width = w + 'px';
-        t.style.height = h + 'px';
-        const nx = Math.round(
-          (parseInt(t.style.left || '0', 10) + evt.deltaRect.left) / GRID
-        ) * GRID;
-        const ny = Math.round(
-          (parseInt(t.style.top || '0', 10) + evt.deltaRect.top) / GRID
-        ) * GRID;
-        t.style.left = nx + 'px';
-        t.style.top = ny + 'px';
-        mountInspectorForSelection();
+    ix(el).resizable({
+      edges: { left: true, right: true, top: true, bottom: true },
+      inertia: false,
+      listeners: {
+        move(evt) {
+          const t = evt.target;
+          let w = Math.max(40, Math.round(evt.rect.width  / GRID) * GRID);
+          let h = Math.max(30, Math.round(evt.rect.height / GRID) * GRID);
+          t.style.width = w + 'px';
+          t.style.height = h + 'px';
+          const nx = Math.round((parseInt(t.style.left || '0', 10) + evt.deltaRect.left) / GRID) * GRID;
+          const ny = Math.round((parseInt(t.style.top  || '0', 10) + evt.deltaRect.top ) / GRID) * GRID;
+          t.style.left = nx + 'px';
+          t.style.top  = ny + 'px';
+          mountInspectorForSelection();
+        },
       },
-    },
-  });
+    });
+  } else {
+    // --- Fallback: manual drag & resize (if Interact.js is missing) ---
+    enableManualDrag(el);
+    enableManualResize(el);
+  }
 
   el.addEventListener('pointerdown', (e) => {
     e.stopPropagation();
-    if (e.shiftKey) {
-      toggleInSelection(el.dataset.id);
-    } else {
-      setSelection([el.dataset.id]);
-    }
+    if (e.shiftKey) toggleInSelection(el.dataset.id);
+    else setSelection([el.dataset.id]);
   });
+}
+
+function enableManualDrag(el){
+  let dragging = false; let sx=0, sy=0, ox=0, oy=0;
+  el.addEventListener('pointerdown', (e)=>{
+    if (e.button !== 0) return; // left only
+    dragging = true; el.setPointerCapture(e.pointerId);
+    sx = e.clientX; sy = e.clientY;
+    ox = parseInt(el.style.left||'0',10); oy = parseInt(el.style.top||'0',10);
+    hideGuides();
+  });
+  el.addEventListener('pointermove', (e)=>{
+    if(!dragging) return;
+    let nx = Math.round((ox + (e.clientX - sx)) / GRID) * GRID;
+    let ny = Math.round((oy + (e.clientY - sy)) / GRID) * GRID;
+    const snapped = smartGuides(el, nx, ny); nx = snapped.x; ny = snapped.y;
+    el.style.left = nx + 'px'; el.style.top = ny + 'px';
+    if (state.selection.size === 1) mountInspectorForSelection();
+  });
+  el.addEventListener('pointerup', (e)=>{ if(!dragging) return; dragging=false; el.releasePointerCapture(e.pointerId); hideGuides(); });
+}
+
+function enableManualResize(el){
+  // create a small handle bottom-right
+  let handle = el.querySelector('.resizer-handle');
+  if(!handle){
+    handle = document.createElement('div');
+    handle.className='resizer-handle';
+    Object.assign(handle.style,{position:'absolute',width:'12px',height:'12px',right:'-6px',bottom:'-6px',border:'1px solid #2b3550',borderRadius:'3px',background:'#1c2436',cursor:'se-resize',pointerEvents:'auto',zIndex:2});
+    el.appendChild(handle);
+  }
+  let resizing=false, sx=0, sy=0, sw=0, sh=0, sl=0, st=0;
+  handle.addEventListener('pointerdown',(e)=>{
+    e.stopPropagation();
+    resizing=true; handle.setPointerCapture(e.pointerId);
+    sx=e.clientX; sy=e.clientY;
+    sw=el.offsetWidth; sh=el.offsetHeight; sl=parseInt(el.style.left||'0',10); st=parseInt(el.style.top||'0',10);
+  });
+  handle.addEventListener('pointermove',(e)=>{
+    if(!resizing) return;
+    const dw = e.clientX - sx; const dh = e.clientY - sy;
+    const w = Math.max(40, Math.round((sw + dw)/GRID)*GRID);
+    const h = Math.max(30, Math.round((sh + dh)/GRID)*GRID);
+    el.style.width = w + 'px'; el.style.height = h + 'px';
+    mountInspectorForSelection();
+  });
+  handle.addEventListener('pointerup',(e)=>{ if(!resizing) return; resizing=false; handle.releasePointerCapture(e.pointerId); });
 }
 
 function toggleInSelection(id) {
@@ -222,73 +265,32 @@ function smartGuides(el, nx, ny) {
     const or = getRect(o);
     const xs = [or.left, or.centerX, or.right];
     for (const x of xs) {
-      if (Math.abs(r.left - x) <= SNAP_TOL) {
-        sx += x - r.left;
-        vPos = x;
-        showV = true;
-      }
-      if (Math.abs(r.centerX - x) <= SNAP_TOL) {
-        sx += x - r.centerX;
-        vPos = x;
-        showV = true;
-      }
-      if (Math.abs(r.right - x) <= SNAP_TOL) {
-        sx += x - r.right;
-        vPos = x;
-        showV = true;
-      }
+      if (Math.abs(r.left - x) <= SNAP_TOL) { sx += x - r.left; vPos = x; showV = true; }
+      if (Math.abs(r.centerX - x) <= SNAP_TOL) { sx += x - r.centerX; vPos = x; showV = true; }
+      if (Math.abs(r.right - x) <= SNAP_TOL) { sx += x - r.right; vPos = x; showV = true; }
     }
     const ys = [or.top, or.centerY, or.bottom];
     for (const y of ys) {
-      if (Math.abs(r.top - y) <= SNAP_TOL) {
-        sy += y - r.top;
-        hPos = y;
-        showH = true;
-      }
-      if (Math.abs(r.centerY - y) <= SNAP_TOL) {
-        sy += y - r.centerY;
-        hPos = y;
-        showH = true;
-      }
-      if (Math.abs(r.bottom - y) <= SNAP_TOL) {
-        sy += y - r.bottom;
-        hPos = y;
-        showH = true;
-      }
+      if (Math.abs(r.top - y) <= SNAP_TOL) { sy += y - r.top; hPos = y; showH = true; }
+      if (Math.abs(r.centerY - y) <= SNAP_TOL) { sy += y - r.centerY; hPos = y; showH = true; }
+      if (Math.abs(r.bottom - y) <= SNAP_TOL) { sy += y - r.bottom; hPos = y; showH = true; }
     }
   }
-  const gv = $('#guide-v'),
-    gh = $('#guide-h');
-  if (showV) {
-    gv.style.left = vPos + 'px';
-    gv.style.display = 'block';
-  } else gv.style.display = 'none';
-  if (showH) {
-    gh.style.top = hPos + 'px';
-    gh.style.display = 'block';
-  } else gh.style.display = 'none';
+  const gv = $('#guide-v'), gh = $('#guide-h');
+  if (showV) { gv.style.left = vPos + 'px'; gv.style.display = 'block'; } else gv.style.display = 'none';
+  if (showH) { gh.style.top  = hPos + 'px'; gh.style.display = 'block'; } else gh.style.display = 'none';
   return { x: sx, y: sy };
 }
 
 function rectAt(el, left, top) {
-  const w = el.offsetWidth,
-    h = el.offsetHeight;
-  return {
-    left,
-    top,
-    right: left + w,
-    bottom: top + h,
-    centerX: left + w / 2,
-    centerY: top + h / 2,
-    w,
-    h,
-  };
+  const w = el.offsetWidth, h = el.offsetHeight;
+  return { left, top, right: left + w, bottom: top + h, centerX: left + w / 2, centerY: top + h / 2, w, h };
 }
 function getRect(el) {
   return rectAt(
     el,
     parseInt(el.style.left || '0', 10),
-    parseInt(el.style.top || '0', 10)
+    parseInt(el.style.top  || '0', 10)
   );
 }
 
@@ -297,7 +299,7 @@ export function serialize() {
   const items = $$('.widget', canvas()).map((el) => {
     const t = el.dataset.type,
       x = parseInt(el.style.left || '0', 10),
-      y = parseInt(el.style.top || '0', 10),
+      y = parseInt(el.style.top  || '0', 10),
       w = el.offsetWidth,
       h = el.offsetHeight;
     const props = extractProps(el, t);
@@ -314,7 +316,7 @@ export function deserialize(data) {
   for (const it of data.items || []) {
     const el = createFromPalette(it.type, it.x, it.y);
     el.dataset.id = it.id;
-    el.style.width = it.w + 'px';
+    el.style.width  = it.w + 'px';
     el.style.height = it.h + 'px';
     applyProps(el, it.type, it);
   }
@@ -324,25 +326,15 @@ export function deserialize(data) {
 function extractProps(el, type) {
   if (type === 'button') {
     const b = el.querySelector('button');
-    return {
-      text: b.textContent,
-      fontSize: parseInt(getComputedStyle(b).fontSize, 10),
-      variant: b.className.replace('variant-', '') || 'primary',
-    };
+    return { text: b.textContent, fontSize: parseInt(getComputedStyle(b).fontSize, 10), variant: b.className.replace('variant-', '') || 'primary' };
   }
   if (type === 'label') {
-    return {
-      text: el.textContent,
-      fontSize: parseInt(getComputedStyle(el).fontSize, 10),
-    };
+    return { text: el.textContent, fontSize: parseInt(getComputedStyle(el).fontSize, 10) };
   }
   if (type === 'toggle') {
     const t = el.querySelector('.toggle');
-    return {
-      text: t.textContent,
-      fontSize: parseInt(getComputedStyle(t).fontSize, 10),
-    };
-    }
+    return { text: t.textContent, fontSize: parseInt(getComputedStyle(t).fontSize, 10) };
+  }
   if (type === 'panel') {
     const header = !!el.querySelector('.panel-header');
     return {
@@ -351,27 +343,16 @@ function extractProps(el, type) {
       borderColor: el.style.borderColor || '#2a2f44',
       bg: el.style.background || '#121722',
       header,
-      headerText: header
-        ? el.querySelector('.panel-header')?.textContent || 'Panel'
-        : 'Panel',
-      headerColor: header
-        ? el.querySelector('.panel-header')?.style.background || '#1b2232'
-        : '#1b2232',
+      headerText: header ? el.querySelector('.panel-header')?.textContent || 'Panel' : 'Panel',
+      headerColor: header ? el.querySelector('.panel-header')?.style.background || '#1b2232' : '#1b2232',
     };
   }
   if (type === 'textfield') {
     const inp = el.querySelector('input');
-    return {
-      label: el.querySelector('label')?.textContent || '',
-      placeholder: inp.placeholder || '',
-      fontSize: parseInt(getComputedStyle(inp).fontSize, 10),
-    };
+    return { label: el.querySelector('label')?.textContent || '', placeholder: inp.placeholder || '', fontSize: parseInt(getComputedStyle(inp).fontSize, 10) };
   }
   if (type === 'checkbox') {
-    return {
-      label: el.querySelector('.lbl').textContent,
-      checked: el.querySelector('.box').style.background !== 'rgb(15, 20, 30)',
-    };
+    return { label: el.querySelector('.lbl').textContent, checked: el.querySelector('.box').style.background !== 'rgb(15, 20, 30)' };
   }
   return {};
 }
