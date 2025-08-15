@@ -9,14 +9,15 @@ function allWidgets(except = null) {
 }
 
 function getRect(el) {
-  const x = (parseInt(el.getAttribute('data-x')) || 0) + (parseInt(el.style.left) || 0);
-  const y = (parseInt(el.getAttribute('data-y')) || 0) + (parseInt(el.style.top) || 0);
+  const x = parseInt(el.getAttribute('data-x')) || 0;
+  const y = parseInt(el.getAttribute('data-y')) || 0;
   const w = el.offsetWidth, h = el.offsetHeight;
   return {
     left: x, right: x + w, top: y, bottom: y + h,
     centerX: x + w / 2, centerY: y + h / 2
   };
 }
+
 
 function hideGuides() {
   document.getElementById('guide-v').style.display = 'none';
