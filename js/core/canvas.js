@@ -105,94 +105,39 @@ export function createFromPalette(
   return el;
 }
 
-function wireInteract(el) {
-   el.addEventListener('pointerdown', (e) => {
-  console.log('POINTERDOWN on widget', el.dataset.id, e);
-});
-el.addEventListener('click', (e) => {
-  console.log('CLICK on widget', el.dataset.id, e);
-});
-
-  // Prefer Interact.js from CDN if available
-  const ix = (typeof window !== 'undefined' && window.interact) ? window.interact : null;
-
-  console.log('ix:', ix, 'el:', el); // <-- вече ix е дефинирана!
-  try {
-    const inter = ix && ix(el);
-    console.log('ix(el):', inter);
-  } catch (e) {
-    console.log('ix(el) ERROR:', e);
-  }
-
-  if (ix) {
-    ix(el).draggable({
+// Глобална инициалиация на Interact.js (само 1 път!)
+function setupInteractDelegated() {
+  if (window.interact && !window._interactInit) {
+    window.interact('.widget').draggable({
       listeners: {
-        start() {
-          console.log('DRAG START', el.dataset.id);
-          state.dragStart.clear();
-          const ids = state.selection.has(el.dataset.id)
-            ? [...state.selection]
-            : [el.dataset.id];
-          for (const id of ids) {
-            const w = $(`.widget[data-id="${id}"]`, canvas());
-            state.dragStart.set(id, {
-              x: parseInt(w.style.left || '0', 10),
-              y: parseInt(w.style.top || '0', 10),
-            });
-          }
-          hideGuides();
-        },
-        move(evt) {
-          console.log('DRAG MOVE', el.dataset.id, evt);
-          const ids = state.selection.has(el.dataset.id)
-            ? [...state.selection]
-            : [el.dataset.id];
-          const start = state.dragStart.get(el.dataset.id);
-          let nx = Math.round((start.x + evt.dx) / GRID) * GRID;
-          let ny = Math.round((start.y + evt.dy) / GRID) * GRID;
-          const snapped = smartGuides(el, nx, ny);
-          nx = snapped.x; ny = snapped.y;
-          for (const id of ids) {
-            const w = $(`.widget[data-id="${id}"]`, canvas());
-            const s = state.dragStart.get(id);
-            w.style.left = s.x + (nx - start.x) + 'px';
-            w.style.top  = s.y + (ny - start.y) + 'px';
-          }
-          if (state.selection.size === 1) mountInspectorForSelection();
-        },
-        end() {
-          console.log('DRAG END', el.dataset.id);
-          hideGuides();
-        },
-      },
-      inertia: false,
+        start(event)  { console.log('DRAG START (delegate)', event); },
+        move(event)   { console.log('DRAG MOVE (delegate)', event); },
+        end(event)    { console.log('DRAG END (delegate)', event); }
+      }
     });
-
-    ix(el).resizable({
+    window.interact('.widget').resizable({
       edges: { left: true, right: true, top: true, bottom: true },
-      inertia: false,
       listeners: {
-        move(evt) {
-          console.log('RESIZE', el.dataset.id, evt);
-          const t = evt.target;
-          let w = Math.max(40, Math.round(evt.rect.width  / GRID) * GRID);
-          let h = Math.max(30, Math.round(evt.rect.height / GRID) * GRID);
-          t.style.width = w + 'px';
-          t.style.height = h + 'px';
-          const nx = Math.round((parseInt(t.style.left || '0', 10) + evt.deltaRect.left) / GRID) * GRID;
-          const ny = Math.round((parseInt(t.style.top  || '0', 10) + evt.deltaRect.top ) / GRID) * GRID;
-          t.style.left = nx + 'px';
-          t.style.top  = ny + 'px';
-          mountInspectorForSelection();
-        },
-      },
+        move(event) { console.log('RESIZE (delegate)', event); }
+      }
     });
-  } else {
-    // --- Fallback: manual drag & resize (if Interact.js is missing) ---
-    enableManualDrag(el);
-    enableManualResize(el);
+    window._interactInit = true;
   }
+}
 
+export function wireInteract(el) {
+  // Добави лога за тест
+  el.addEventListener('pointerdown', (e) => {
+    console.log('POINTERDOWN on widget', el.dataset.id, e);
+  });
+  el.addEventListener('click', (e) => {
+    console.log('CLICK on widget', el.dataset.id, e);
+  });
+
+  // Инициализирай delegate Interact.js (само веднъж за всички .widget)
+  setupInteractDelegated();
+
+  // Избор (selection) логика (остава както си беше)
   el.addEventListener('pointerdown', (e) => {
     e.stopPropagation();
     if (e.shiftKey) toggleInSelection(el.dataset.id);
