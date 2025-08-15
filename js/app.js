@@ -1,7 +1,3 @@
-// app.js – Drag, Resize & Smart Guides
-// ЗАДЪЛЖИТЕЛНО: Interact.js трябва да е зареден чрез CDN в index.html
-// <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
-
 const SNAP_TOL = 8;
 
 function allWidgets(except = null) {
@@ -9,19 +5,16 @@ function allWidgets(except = null) {
 }
 
 function getRect(el) {
-  // x и y са относително към canvas!
-  const canvasRect = document.getElementById('canvas').getBoundingClientRect();
-  const elRect = el.getBoundingClientRect();
-  const x = elRect.left - canvasRect.left;
-  const y = elRect.top - canvasRect.top;
+  // Използваме само data-x, data-y и width/height!
+  const x = parseFloat(el.getAttribute('data-x')) || 0;
+  const y = parseFloat(el.getAttribute('data-y')) || 0;
   const w = el.offsetWidth, h = el.offsetHeight;
   return {
     left: x, right: x + w, top: y, bottom: y + h,
-    centerX: x + w / 2, centerY: y + h / 2
+    centerX: x + w / 2, centerY: y + h / 2,
+    width: w, height: h
   };
 }
-
-
 
 function hideGuides() {
   document.getElementById('guide-v').style.display = 'none';
@@ -29,19 +22,18 @@ function hideGuides() {
 }
 
 function showGuide(axis, pos) {
-  const canvasRect = document.getElementById('canvas').getBoundingClientRect();
   if (axis === 'v') {
     const guide = document.getElementById('guide-v');
-    guide.style.left = (pos) + 'px';
+    guide.style.left = pos + 'px';
     guide.style.display = 'block';
   } else {
     const guide = document.getElementById('guide-h');
-    guide.style.top = (pos) + 'px';
+    guide.style.top = pos + 'px';
     guide.style.display = 'block';
   }
 }
 
-
+// Връща и къде да се покаже snap-натия ръб!
 function smartSnap(target, nx, ny) {
   const tr = getRect(target);
   let snappedX = nx, snappedY = ny;
@@ -57,7 +49,6 @@ function smartSnap(target, nx, ny) {
         if (Math.abs((nx + (tx - tr.left)) - ox) < SNAP_TOL) {
           snappedX = ox - (tx - tr.left);
           vGuide = true;
-          // Ново: линията трябва да е на snap-натия ръб на нашия widget!
           if (txName === 'left')    vGuidePos = snappedX;
           if (txName === 'centerX') vGuidePos = snappedX + (tr.centerX - tr.left);
           if (txName === 'right')   vGuidePos = snappedX + (tr.right - tr.left);
@@ -79,24 +70,23 @@ function smartSnap(target, nx, ny) {
     }
   }
 
-  if (vGuide) showGuide('v', vGuidePos);
+  if (vGuide && vGuidePos !== null) showGuide('v', vGuidePos);
   else document.getElementById('guide-v').style.display = 'none';
 
-  if (hGuide) showGuide('h', hGuidePos);
+  if (hGuide && hGuidePos !== null) showGuide('h', hGuidePos);
   else document.getElementById('guide-h').style.display = 'none';
 
   return { x: snappedX, y: snappedY };
 }
 
-
-// Interact.js инициализация
+// Инициализация на drag/resize
 window.addEventListener('DOMContentLoaded', () => {
   interact('.widget').draggable({
     listeners: {
       move (event) {
         const target = event.target;
-        let x = parseInt(target.getAttribute('data-x')) || 0;
-        let y = parseInt(target.getAttribute('data-y')) || 0;
+        let x = parseFloat(target.getAttribute('data-x')) || 0;
+        let y = parseFloat(target.getAttribute('data-y')) || 0;
         x += event.dx;
         y += event.dy;
         // --- SNAPPING ---
@@ -107,7 +97,7 @@ window.addEventListener('DOMContentLoaded', () => {
         target.setAttribute('data-x', x);
         target.setAttribute('data-y', y);
       },
-      end (event) {
+      end () {
         hideGuides();
       }
     }
@@ -116,9 +106,8 @@ window.addEventListener('DOMContentLoaded', () => {
     edges: { left: true, right: true, top: true, bottom: true },
     listeners: {
       move (event) {
-        let { x, y } = event.target.dataset;
-        x = parseInt(x) || 0;
-        y = parseInt(y) || 0;
+        let x = parseFloat(event.target.getAttribute('data-x')) || 0;
+        let y = parseFloat(event.target.getAttribute('data-y')) || 0;
         // update the element's style
         event.target.style.width  = event.rect.width + 'px';
         event.target.style.height = event.rect.height + 'px';
@@ -128,9 +117,9 @@ window.addEventListener('DOMContentLoaded', () => {
         event.target.style.transform = `translate(${x}px, ${y}px)`;
         event.target.setAttribute('data-x', x);
         event.target.setAttribute('data-y', y);
-        // Smart guides могат да се добавят и тук, ако искаш snap при resize
+        // Може да добавиш snap & guide и при resize, ако желаеш
       },
-      end (event) {
+      end () {
         hideGuides();
       }
     }
