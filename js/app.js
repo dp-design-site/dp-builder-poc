@@ -184,19 +184,24 @@ document.addEventListener('DOMContentLoaded', () => {
   const marquee = document.getElementById('marquee');
   let marqueeActive = false;
   let marqueeStart = {x:0, y:0};
+  let marqueeType = 'normal'; // left-right или right-left
 
   canvas.addEventListener('mousedown', function(e) {
-    // Ignore right click
     if (e.button !== 0) return;
-    // Ignore click on widget
     if (e.target.classList.contains('widget')) return;
+    // Clear selection ако не започваш marquee (само click)
+    if (!e.shiftKey && !e.ctrlKey) {
+      for (const w of document.querySelectorAll('.widget.selected')) w.classList.remove('selected');
+    }
     marqueeActive = true;
     marqueeStart = { x: e.offsetX, y: e.offsetY };
     marquee.style.left = marqueeStart.x + 'px';
     marquee.style.top = marqueeStart.y + 'px';
     marquee.style.width = marquee.style.height = '0px';
     marquee.style.display = 'block';
+    marqueeType = null; // ще определим при mousemove
   });
+
   canvas.addEventListener('mousemove', function(e) {
     if (!marqueeActive) return;
     const x = e.offsetX, y = e.offsetY;
@@ -208,34 +213,58 @@ document.addEventListener('DOMContentLoaded', () => {
     marquee.style.top = top + 'px';
     marquee.style.width = width + 'px';
     marquee.style.height = height + 'px';
+    marqueeType = (x >= marqueeStart.x) ? 'left-right' : 'right-left';
     for (const w of document.querySelectorAll('.widget')) {
       const wx = parseFloat(w.getAttribute('data-x')) || 0;
       const wy = parseFloat(w.getAttribute('data-y')) || 0;
       const ww = w.offsetWidth, wh = w.offsetHeight;
-      if (
-        wx < left + width && wx + ww > left &&
-        wy < top + height && wy + wh > top
-      ) {
-        w.classList.add('selected');
+      if (marqueeType === 'left-right') {
+        // Само напълно вътре
+        if (
+          wx >= left && wx + ww <= left + width &&
+          wy >= top && wy + wh <= top + height
+        ) {
+          w.classList.add('selected');
+        } else {
+          w.classList.remove('selected');
+        }
       } else {
-        w.classList.remove('selected');
+        // Всичко, което пресича
+        if (
+          wx < left + width && wx + ww > left &&
+          wy < top + height && wy + wh > top
+        ) {
+          w.classList.add('selected');
+        } else {
+          w.classList.remove('selected');
+        }
       }
     }
   });
+
   canvas.addEventListener('mouseup', function(e) {
     if (!marqueeActive) return;
     marqueeActive = false;
     marquee.style.display = 'none';
   });
 
-  // === SHIFT селекция + клик по widget ===
+  // Escape - clear selection
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      for (const w of document.querySelectorAll('.widget.selected')) w.classList.remove('selected');
+      marqueeActive = false;
+      marquee.style.display = 'none';
+    }
+  });
+
+  // SHIFT селекция + клик по widget
   for (const widget of document.querySelectorAll('.widget')) {
     widget.addEventListener('mousedown', e => {
       if (e.button !== 0) return;
+      if (marqueeActive) return;
       if (e.shiftKey) {
         widget.classList.toggle('selected');
       } else {
-        // Ако не е shift – изчисти всички други selection
         for (const w of document.querySelectorAll('.widget.selected')) w.classList.remove('selected');
         widget.classList.add('selected');
       }
@@ -243,7 +272,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // === DRAG/RESIZE с MULTI-SELECTION ===
+  // DRAG/RESIZE с MULTI-SELECTION
   interact('.widget').draggable({
     listeners: {
       move (event) {
@@ -252,10 +281,10 @@ document.addEventListener('DOMContentLoaded', () => {
         let y = parseFloat(target.getAttribute('data-y')) || 0;
         x += event.dx;
         y += event.dy;
-        // --- SNAPPING ---
+        // SNAPPING
         const snapped = smartSnap(target, x, y, event);
         x = snapped.x; y = snapped.y;
-        // === MULTI-SELECTION MOVE ===
+        // MULTI-SELECTION MOVE
         if (target.classList.contains('selected')) {
           for (const w of document.querySelectorAll('.widget.selected')) {
             if (w === target) continue;
@@ -267,6 +296,9 @@ document.addEventListener('DOMContentLoaded', () => {
             w.setAttribute('data-x', wx);
             w.setAttribute('data-y', wy);
           }
+        } else {
+          for (const w of document.querySelectorAll('.widget.selected')) w.classList.remove('selected');
+          target.classList.add('selected');
         }
         target.style.transform = `translate(${x}px, ${y}px)`;
         target.setAttribute('data-x', x);
@@ -286,32 +318,26 @@ document.addEventListener('DOMContentLoaded', () => {
         // Преди resize - старите w/h:
         const prevW = event.target.offsetWidth;
         const prevH = event.target.offsetHeight;
-
         // Update размера
         event.target.style.width  = event.rect.width + 'px';
         event.target.style.height = event.rect.height + 'px';
-
         // Update позиция ако resize-ваш от ляво/горе
         x += event.deltaRect.left;
         y += event.deltaRect.top;
-
-        // --- SNAPPING ---
+        // SNAPPING
         const w = event.rect.width;
         const h = event.rect.height;
         const tr = {
           left: x, right: x + w, top: y, bottom: y + h,
           centerX: x + w/2, centerY: y + h/2
         };
-
         let snappedX = x, snappedY = y;
         let snappedW = w, snappedH = h;
         let vGuide = null, hGuide = null;
         let vGuidePos = null, hGuidePos = null;
-
         if (SNAP_ENABLED && !event.shiftKey) {
           for (const other of allWidgets(event.target)) {
             const or = getRect(other);
-
             // Вертикален snap (left/right/center)
             if (SNAP_EDGES) {
               for (const [txName, tx] of [['left', tr.left], ['right', tr.right]]) {
@@ -350,7 +376,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (SNAP_CENTERS) {
               for (const [tyName, ty] of [['centerY', tr.centerY]]) {
                 for (const oy of [or.centerY]) {
-                  if (Math.abs(ty - oy) < SNAP_TOL) {
+                 if (Math.abs(ty - oy) < SNAP_TOL) {
                     const newY = oy - (tr.bottom - tr.top)/2;
                     snappedY = newY;
                     snappedH = tr.bottom - tr.top;
@@ -359,7 +385,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
               }
             }
-          }
+          } 
         }
         event.target.style.transform = `translate(${snappedX}px, ${snappedY}px)`;
         event.target.setAttribute('data-x', snappedX);
