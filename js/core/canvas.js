@@ -113,6 +113,7 @@ function wireInteract(el) {
     ix(el).draggable({
       listeners: {
         start() {
+          console.log('DRAG START', el.dataset.id);
           state.dragStart.clear();
           const ids = state.selection.has(el.dataset.id)
             ? [...state.selection]
@@ -127,6 +128,7 @@ function wireInteract(el) {
           hideGuides();
         },
         move(evt) {
+          console.log('DRAG MOVE', el.dataset.id, evt);
           const ids = state.selection.has(el.dataset.id)
             ? [...state.selection]
             : [el.dataset.id];
@@ -143,7 +145,10 @@ function wireInteract(el) {
           }
           if (state.selection.size === 1) mountInspectorForSelection();
         },
-        end() { hideGuides(); },
+        end() {
+          console.log('DRAG END', el.dataset.id);
+          hideGuides();
+        },
       },
       inertia: false,
     });
@@ -153,6 +158,7 @@ function wireInteract(el) {
       inertia: false,
       listeners: {
         move(evt) {
+          console.log('RESIZE', el.dataset.id, evt);
           const t = evt.target;
           let w = Math.max(40, Math.round(evt.rect.width  / GRID) * GRID);
           let h = Math.max(30, Math.round(evt.rect.height / GRID) * GRID);
