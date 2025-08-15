@@ -132,6 +132,23 @@ function smartSnap(target, nx, ny, event = {}) {
 
 // === Snapbar logic ===
 document.addEventListener('DOMContentLoaded', () => {
+  // --- СИНХРОНИЗАЦИЯ COLOR PICKER + HEX ---
+  const colorPicker = document.getElementById('guide-color');
+  const colorHex = document.getElementById('guide-color-hex');
+  if (colorPicker && colorHex) {
+    colorPicker.addEventListener('input', e => {
+      colorHex.value = e.target.value;
+      updateGuideStyles();
+    });
+    colorHex.addEventListener('input', e => {
+      let val = e.target.value;
+      if (!val.startsWith('#')) val = '#' + val;
+      if (/^#[0-9a-fA-F]{6}$/.test(val)) {
+        colorPicker.value = val;
+        updateGuideStyles();
+      }
+    });
+  }
   // Guide style update
   updateGuideStyles();
   // Snap enable
