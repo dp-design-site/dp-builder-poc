@@ -46,33 +46,48 @@ function smartSnap(target, nx, ny) {
   const tr = getRect(target);
   let snappedX = nx, snappedY = ny;
   let vGuide = null, hGuide = null;
+  let vGuidePos = null, hGuidePos = null;
 
   for (const other of allWidgets(target)) {
     const or = getRect(other);
+
     // Vertical snap (left, center, right)
-    for (const ox of [or.left, or.centerX, or.right]) {
-      for (const tx of [tr.left, tr.centerX, tr.right]) {
+    for (const [txName, tx] of [['left', tr.left], ['centerX', tr.centerX], ['right', tr.right]]) {
+      for (const ox of [or.left, or.centerX, or.right]) {
         if (Math.abs((nx + (tx - tr.left)) - ox) < SNAP_TOL) {
           snappedX = ox - (tx - tr.left);
-          vGuide = ox;
+          vGuide = true;
+          // Ново: линията трябва да е на snap-натия ръб на нашия widget!
+          if (txName === 'left')    vGuidePos = snappedX;
+          if (txName === 'centerX') vGuidePos = snappedX + (tr.centerX - tr.left);
+          if (txName === 'right')   vGuidePos = snappedX + (tr.right - tr.left);
         }
       }
     }
+
     // Horizontal snap (top, center, bottom)
-    for (const oy of [or.top, or.centerY, or.bottom]) {
-      for (const ty of [tr.top, tr.centerY, tr.bottom]) {
+    for (const [tyName, ty] of [['top', tr.top], ['centerY', tr.centerY], ['bottom', tr.bottom]]) {
+      for (const oy of [or.top, or.centerY, or.bottom]) {
         if (Math.abs((ny + (ty - tr.top)) - oy) < SNAP_TOL) {
           snappedY = oy - (ty - tr.top);
-          hGuide = oy;
+          hGuide = true;
+          if (tyName === 'top')     hGuidePos = snappedY;
+          if (tyName === 'centerY') hGuidePos = snappedY + (tr.centerY - tr.top);
+          if (tyName === 'bottom')  hGuidePos = snappedY + (tr.bottom - tr.top);
         }
       }
     }
   }
-  if (vGuide !== null) showGuide('v', vGuide); else document.getElementById('guide-v').style.display = 'none';
-  if (hGuide !== null) showGuide('h', hGuide); else document.getElementById('guide-h').style.display = 'none';
+
+  if (vGuide) showGuide('v', vGuidePos);
+  else document.getElementById('guide-v').style.display = 'none';
+
+  if (hGuide) showGuide('h', hGuidePos);
+  else document.getElementById('guide-h').style.display = 'none';
 
   return { x: snappedX, y: snappedY };
 }
+
 
 // Interact.js инициализация
 window.addEventListener('DOMContentLoaded', () => {
