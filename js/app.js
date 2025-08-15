@@ -143,11 +143,7 @@ function bootstrap() {
     if (el) el.onclick = fn;
   }
 
-  // Demo seed (can be removed)
-  createFromPalette('button');
-  createFromPalette('panel');
-  createFromPalette('textfield');
-}
+ }
 
 // Run when DOM is ready (script is loaded at the end of body, but this is safe)
 if (document.readyState === 'loading') {
