@@ -416,3 +416,31 @@ document.addEventListener('DOMContentLoaded', () => {
             if (SNAP_CENTERS) {
               for (const [tyName, ty] of [['centerY', tr.centerY]]) {
                 for (const oy of [or.centerY]) {
+                 if (Math.abs(ty - oy) < SNAP_TOL) {
+                    const newY = oy - (tr.bottom - tr.top)/2;
+                    snappedY = newY;
+                    snappedH = tr.bottom - tr.top;
+                    hGuide = true; hGuidePos = oy;
+                  }
+                }
+              }
+            }
+          } 
+        }
+        event.target.style.transform = `translate(${snappedX}px, ${snappedY}px)`;
+        event.target.setAttribute('data-x', snappedX);
+        event.target.setAttribute('data-y', snappedY);
+        event.target.style.width  = Math.max(40, snappedW) + 'px';
+        event.target.style.height = Math.max(40, snappedH) + 'px';
+
+        if (vGuide && vGuidePos !== null) showGuide('v', vGuidePos);
+        else document.getElementById('guide-v').style.display = 'none';
+        if (hGuide && hGuidePos !== null) showGuide('h', hGuidePos);
+        else document.getElementById('guide-h').style.display = 'none';
+      },
+      end () {
+        hideGuides();
+      }
+    }
+  });
+});
