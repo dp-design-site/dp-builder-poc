@@ -3,8 +3,10 @@ let SNAP_ENABLED = true;
 let SNAP_EDGES = true;
 let SNAP_CENTERS = true;
 
-function allWidgets(except = null) {
-  return Array.from(document.querySelectorAll('.widget')).filter(w => w !== except);
+function allWidgets(except = null, ignoreSelected = false) {
+  return Array.from(document.querySelectorAll('.widget')).filter(w =>
+    w !== except && (!ignoreSelected || !w.classList.contains('selected'))
+  );
 }
 
 function getRect(el) {
@@ -61,6 +63,8 @@ function updateGuideStyles() {
 }
 
 function smartSnap(target, nx, ny, event = {}) {
+  const ignoreSelected = target.classList.contains('selected');
+  for (const other of allWidgets(target, ignoreSelected)) {
   if (!SNAP_ENABLED || event.shiftKey) {
     hideGuides();
     return { x: nx, y: ny };
@@ -71,7 +75,8 @@ function smartSnap(target, nx, ny, event = {}) {
   let vGuidePos = null, hGuidePos = null;
 
   for (const other of allWidgets(target)) {
-    const or = getRect(other);
+    const ignoreSelected = target.classList.contains('selected');
+    for (const other of allWidgets(target, ignoreSelected)) {
 
     // Vertical snap (left, center, right)
     if (SNAP_EDGES) {
