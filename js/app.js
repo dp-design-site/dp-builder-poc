@@ -37,8 +37,8 @@ function showGuide(axis, pos) {
 
 function updateGuideStyles() {
   const style = document.getElementById('guide-style')?.value || 'solid';
-  const color = document.getElementById('guide-color')?.value || '#37bcff';
-  const width = document.getElementById('guide-width')?.value || 2;
+  const color = document.getElementById('guide-color')?.value || '#38A7DA';
+  const width = document.getElementById('guide-width')?.value || 0.5;
   for (const id of ['guide-v', 'guide-h']) {
     const guide = document.getElementById(id);
     // Style: dashed, dotted, solid
