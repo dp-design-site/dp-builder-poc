@@ -1,6 +1,20 @@
 // DP Configurator Builder – App entry (ES module)
 // This file wires the UI: palette, canvas, inspector, and app-level actions.
 
+if (window.interact && !window._interactInit) {
+  window.interact('.widget').draggable({
+    listeners: {
+      move (event) { event.target.style.left = (parseInt(event.target.style.left || 0) + event.dx) + 'px';
+                     event.target.style.top  = (parseInt(event.target.style.top  || 0) + event.dy) + 'px';
+                     console.log('DRAG MOVE SIMPLE', event);
+      }
+    }
+  });
+  window._interactInit = true;
+}
+
+
+
 import {
   initCanvas,
   createFromPalette,
