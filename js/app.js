@@ -203,6 +203,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   canvas.addEventListener('mousemove', function(e) {
+    // ... в началото на marquee drag ...
+    document.body.classList.add('marquee-dragging');
+
     if (!marqueeActive) return;
     const x = e.offsetX, y = e.offsetY;
     const left = Math.min(marqueeStart.x, x);
@@ -246,6 +249,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!marqueeActive) return;
     marqueeActive = false;
     marquee.style.display = 'none';
+    // ... когато приключи marquee ...
+    document.body.classList.remove('marquee-dragging');
+
   });
 
   // Escape - clear selection
