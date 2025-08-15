@@ -49,3 +49,20 @@ body {
   height: 2px; width: 100%;
   left: 0; top: 0;
 }
+
+.snapbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  background: #232a3a;
+  border-top: 1px solid #27304a;
+  box-shadow: 0 -2px 8px #0002;
+  padding: 8px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 48px; /* фиксирана височина, можеш да я коригираш */
+}
+
