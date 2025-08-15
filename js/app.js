@@ -1,11 +1,13 @@
-const SNAP_TOL = 8;
+let SNAP_TOL = 8;
+let SNAP_ENABLED = true;
+let SNAP_EDGES = true;
+let SNAP_CENTERS = true;
 
 function allWidgets(except = null) {
   return Array.from(document.querySelectorAll('.widget')).filter(w => w !== except);
 }
 
 function getRect(el) {
-  // Използваме само data-x, data-y и width/height!
   const x = parseFloat(el.getAttribute('data-x')) || 0;
   const y = parseFloat(el.getAttribute('data-y')) || 0;
   const w = el.offsetWidth, h = el.offsetHeight;
@@ -22,19 +24,47 @@ function hideGuides() {
 }
 
 function showGuide(axis, pos) {
+  const guide = document.getElementById(axis === 'v' ? 'guide-v' : 'guide-h');
   if (axis === 'v') {
-    const guide = document.getElementById('guide-v');
     guide.style.left = pos + 'px';
     guide.style.display = 'block';
   } else {
-    const guide = document.getElementById('guide-h');
     guide.style.top = pos + 'px';
     guide.style.display = 'block';
   }
+  updateGuideStyles(); // винаги обновявай стиловете!
 }
 
-// Връща и къде да се покаже snap-натия ръб!
-function smartSnap(target, nx, ny) {
+function updateGuideStyles() {
+  const style = document.getElementById('guide-style')?.value || 'solid';
+  const color = document.getElementById('guide-color')?.value || '#37bcff';
+  const width = document.getElementById('guide-width')?.value || 2;
+  for (const id of ['guide-v', 'guide-h']) {
+    const guide = document.getElementById(id);
+    // Style: dashed, dotted, solid
+    if (style !== 'solid') {
+      guide.style.background = 'none';
+      if (id === 'guide-v') {
+        guide.style.borderLeft = width + 'px ' + style + ' ' + color;
+        guide.style.borderTop = 'none';
+      } else {
+        guide.style.borderTop = width + 'px ' + style + ' ' + color;
+        guide.style.borderLeft = 'none';
+      }
+    } else {
+      guide.style.border = 'none';
+      guide.style.background = color;
+    }
+    guide.style.width = id === 'guide-v' ? width + 'px' : '';
+    guide.style.height = id === 'guide-h' ? width + 'px' : '';
+  }
+}
+
+function smartSnap(target, nx, ny, event = {}) {
+  if (!SNAP_ENABLED || event.shiftKey) {
+    hideGuides();
+    return { x: nx, y: ny };
+  }
   const tr = getRect(target);
   let snappedX = nx, snappedY = ny;
   let vGuide = null, hGuide = null;
@@ -44,27 +74,49 @@ function smartSnap(target, nx, ny) {
     const or = getRect(other);
 
     // Vertical snap (left, center, right)
-    for (const [txName, tx] of [['left', tr.left], ['centerX', tr.centerX], ['right', tr.right]]) {
-      for (const ox of [or.left, or.centerX, or.right]) {
-        if (Math.abs((nx + (tx - tr.left)) - ox) < SNAP_TOL) {
-          snappedX = ox - (tx - tr.left);
-          vGuide = true;
-          if (txName === 'left')    vGuidePos = snappedX;
-          if (txName === 'centerX') vGuidePos = snappedX + (tr.centerX - tr.left);
-          if (txName === 'right')   vGuidePos = snappedX + (tr.right - tr.left);
+    if (SNAP_EDGES) {
+      for (const [txName, tx] of [['left', tr.left], ['right', tr.right]]) {
+        for (const ox of [or.left, or.right]) {
+          if (Math.abs((nx + (tx - tr.left)) - ox) < SNAP_TOL) {
+            snappedX = ox - (tx - tr.left);
+            vGuide = true;
+            vGuidePos = snappedX + (tx - tr.left);
+          }
+        }
+      }
+    }
+    if (SNAP_CENTERS) {
+      for (const [txName, tx] of [['centerX', tr.centerX]]) {
+        for (const ox of [or.centerX]) {
+          if (Math.abs((nx + (tx - tr.left)) - ox) < SNAP_TOL) {
+            snappedX = ox - (tx - tr.left);
+            vGuide = true;
+            vGuidePos = snappedX + (tx - tr.left);
+          }
         }
       }
     }
 
     // Horizontal snap (top, center, bottom)
-    for (const [tyName, ty] of [['top', tr.top], ['centerY', tr.centerY], ['bottom', tr.bottom]]) {
-      for (const oy of [or.top, or.centerY, or.bottom]) {
-        if (Math.abs((ny + (ty - tr.top)) - oy) < SNAP_TOL) {
-          snappedY = oy - (ty - tr.top);
-          hGuide = true;
-          if (tyName === 'top')     hGuidePos = snappedY;
-          if (tyName === 'centerY') hGuidePos = snappedY + (tr.centerY - tr.top);
-          if (tyName === 'bottom')  hGuidePos = snappedY + (tr.bottom - tr.top);
+    if (SNAP_EDGES) {
+      for (const [tyName, ty] of [['top', tr.top], ['bottom', tr.bottom]]) {
+        for (const oy of [or.top, or.bottom]) {
+          if (Math.abs((ny + (ty - tr.top)) - oy) < SNAP_TOL) {
+            snappedY = oy - (ty - tr.top);
+            hGuide = true;
+            hGuidePos = snappedY + (ty - tr.top);
+          }
+        }
+      }
+    }
+    if (SNAP_CENTERS) {
+      for (const [tyName, ty] of [['centerY', tr.centerY]]) {
+        for (const oy of [or.centerY]) {
+          if (Math.abs((ny + (ty - tr.top)) - oy) < SNAP_TOL) {
+            snappedY = oy - (ty - tr.top);
+            hGuide = true;
+            hGuidePos = snappedY + (ty - tr.top);
+          }
         }
       }
     }
@@ -72,15 +124,34 @@ function smartSnap(target, nx, ny) {
 
   if (vGuide && vGuidePos !== null) showGuide('v', vGuidePos);
   else document.getElementById('guide-v').style.display = 'none';
-
   if (hGuide && hGuidePos !== null) showGuide('h', hGuidePos);
   else document.getElementById('guide-h').style.display = 'none';
 
   return { x: snappedX, y: snappedY };
 }
 
-// Инициализация на drag/resize
-window.addEventListener('DOMContentLoaded', () => {
+// === Snapbar logic ===
+document.addEventListener('DOMContentLoaded', () => {
+  // Guide style update
+  updateGuideStyles();
+  // Snap enable
+  document.getElementById('snap-enable')?.addEventListener('change', e => {
+    SNAP_ENABLED = !!e.target.checked;
+  });
+  document.getElementById('snap-edges')?.addEventListener('change', e => {
+    SNAP_EDGES = !!e.target.checked;
+  });
+  document.getElementById('snap-centers')?.addEventListener('change', e => {
+    SNAP_CENTERS = !!e.target.checked;
+  });
+  document.getElementById('snap-tolerance')?.addEventListener('input', e => {
+    SNAP_TOL = parseInt(e.target.value, 10);
+  });
+  for (const id of ['guide-style','guide-color','guide-width']) {
+    document.getElementById(id)?.addEventListener('input', updateGuideStyles);
+  }
+
+  // Drag/resize init
   interact('.widget').draggable({
     listeners: {
       move (event) {
@@ -90,7 +161,7 @@ window.addEventListener('DOMContentLoaded', () => {
         x += event.dx;
         y += event.dy;
         // --- SNAPPING ---
-        const snapped = smartSnap(target, x, y);
+        const snapped = smartSnap(target, x, y, event);
         x = snapped.x; y = snapped.y;
 
         target.style.transform = `translate(${x}px, ${y}px)`;
@@ -134,42 +205,59 @@ window.addEventListener('DOMContentLoaded', () => {
         let vGuide = null, hGuide = null;
         let vGuidePos = null, hGuidePos = null;
 
-        for (const other of allWidgets(event.target)) {
-          const or = getRect(other);
+        if (SNAP_ENABLED && !event.shiftKey) {
+          for (const other of allWidgets(event.target)) {
+            const or = getRect(other);
 
-          // Вертикален snap (left/right/center)
-          for (const [txName, tx] of [['left', tr.left], ['centerX', tr.centerX], ['right', tr.right]]) {
-            for (const ox of [or.left, or.centerX, or.right]) {
-              if (Math.abs(tx - ox) < SNAP_TOL) {
-                if (txName === 'left')   { snappedX = ox; snappedW = tr.right - ox; vGuide = true; vGuidePos = ox; }
-                if (txName === 'right')  { snappedW = ox - tr.left; vGuide = true; vGuidePos = ox; }
-                if (txName === 'centerX'){
-                  // Snap към център – местим x и width наведнъж
-                  const newX = ox - (tr.right - tr.left)/2;
-                  snappedX = newX;
-                  snappedW = tr.right - tr.left;
-                  vGuide = true; vGuidePos = ox;
+            // Вертикален snap (left/right/center)
+            if (SNAP_EDGES) {
+              for (const [txName, tx] of [['left', tr.left], ['right', tr.right]]) {
+                for (const ox of [or.left, or.right]) {
+                  if (Math.abs(tx - ox) < SNAP_TOL) {
+                    if (txName === 'left')   { snappedX = ox; snappedW = tr.right - ox; vGuide = true; vGuidePos = ox; }
+                    if (txName === 'right')  { snappedW = ox - tr.left; vGuide = true; vGuidePos = ox; }
+                  }
                 }
               }
             }
-          }
-          // Хоризонтален snap (top/bottom/center)
-          for (const [tyName, ty] of [['top', tr.top], ['centerY', tr.centerY], ['bottom', tr.bottom]]) {
-            for (const oy of [or.top, or.centerY, or.bottom]) {
-              if (Math.abs(ty - oy) < SNAP_TOL) {
-                if (tyName === 'top')    { snappedY = oy; snappedH = tr.bottom - oy; hGuide = true; hGuidePos = oy; }
-                if (tyName === 'bottom') { snappedH = oy - tr.top; hGuide = true; hGuidePos = oy; }
-                if (tyName === 'centerY'){
-                  const newY = oy - (tr.bottom - tr.top)/2;
-                  snappedY = newY;
-                  snappedH = tr.bottom - tr.top;
-                  hGuide = true; hGuidePos = oy;
+            if (SNAP_CENTERS) {
+              for (const [txName, tx] of [['centerX', tr.centerX]]) {
+                for (const ox of [or.centerX]) {
+                  if (Math.abs(tx - ox) < SNAP_TOL) {
+                    // Snap към център – местим x и width наведнъж
+                    const newX = ox - (tr.right - tr.left)/2;
+                    snappedX = newX;
+                    snappedW = tr.right - tr.left;
+                    vGuide = true; vGuidePos = ox;
+                  }
+                }
+              }
+            }
+            // Хоризонтален snap (top/bottom/center)
+            if (SNAP_EDGES) {
+              for (const [tyName, ty] of [['top', tr.top], ['bottom', tr.bottom]]) {
+                for (const oy of [or.top, or.bottom]) {
+                  if (Math.abs(ty - oy) < SNAP_TOL) {
+                    if (tyName === 'top')    { snappedY = oy; snappedH = tr.bottom - oy; hGuide = true; hGuidePos = oy; }
+                    if (tyName === 'bottom') { snappedH = oy - tr.top; hGuide = true; hGuidePos = oy; }
+                  }
+                }
+              }
+            }
+            if (SNAP_CENTERS) {
+              for (const [tyName, ty] of [['centerY', tr.centerY]]) {
+                for (const oy of [or.centerY]) {
+                  if (Math.abs(ty - oy) < SNAP_TOL) {
+                    const newY = oy - (tr.bottom - tr.top)/2;
+                    snappedY = newY;
+                    snappedH = tr.bottom - tr.top;
+                    hGuide = true; hGuidePos = oy;
+                  }
                 }
               }
             }
           }
         }
-
         event.target.style.transform = `translate(${snappedX}px, ${snappedY}px)`;
         event.target.setAttribute('data-x', snappedX);
         event.target.setAttribute('data-y', snappedY);
@@ -178,7 +266,6 @@ window.addEventListener('DOMContentLoaded', () => {
 
         if (vGuide && vGuidePos !== null) showGuide('v', vGuidePos);
         else document.getElementById('guide-v').style.display = 'none';
-
         if (hGuide && hGuidePos !== null) showGuide('h', hGuidePos);
         else document.getElementById('guide-h').style.display = 'none';
       },
