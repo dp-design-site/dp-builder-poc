@@ -90,6 +90,7 @@ function smartSnap(target, nx, ny, event = {}) {
         }
       }
     }
+  
     if (SNAP_CENTERS) {
       for (const [txName, tx] of [['centerX', tr.centerX]]) {
         for (const ox of [or.centerX]) {
@@ -159,6 +160,7 @@ function smartSnap(target, nx, ny, event = {}) {
   else document.getElementById('guide-h').style.display = 'none';
 
   return { x: snappedX, y: snappedY };
+}
 }
 
 // === SNAPBAR логика + COLOR HEX синхронизация ===
