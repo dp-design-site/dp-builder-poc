@@ -1,0 +1,121 @@
+<!-- context-menu.html -->
+<div id="context-menu" class="context-menu"></div>
+<style>
+.context-menu {
+  position: fixed;
+  min-width: 180px;
+  background: #23293a;
+  color: #fff;
+  border: 1.5px solid #2a3244;
+  box-shadow: 0 6px 32px #0008, 0 1.5px 6px #23293a22;
+  border-radius: 10px;
+  z-index: 99999;
+  font-family: inherit;
+  font-size: 16px;
+  padding: 6px 0;
+  user-select: none;
+  display: none;
+}
+.context-menu__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 18px 7px 16px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.14s;
+  min-height: 28px;
+}
+.context-menu__item:hover {
+  background: #304058;
+}
+.context-menu__item.shortcut {
+  opacity: 0.85;
+  font-size: 15px;
+  font-family: "Consolas", monospace;
+  letter-spacing: 0.5px;
+  margin-left: 24px;
+}
+.context-menu__separator {
+  height: 1px;
+  background: #2a3244;
+  margin: 5px 0 5px 0;
+  border: none;
+}
+.context-menu__item.disabled {
+  color: #888a;
+  pointer-events: none;
+  background: none;
+}
+.context-menu__icon {
+  width: 1.2em;
+  height: 1.2em;
+  margin-right: 8px;
+  opacity: 0.85;
+}
+</style>
+<script>
+const menuContainer = document.getElementById('context-menu');
+let menuHideHandler = null;
+
+function showContextMenu(x, y, items) {
+  menuContainer.innerHTML = '';
+  for (const item of items) {
+    if (item === 'separator') {
+      const sep = document.createElement('div');
+      sep.className = 'context-menu__separator';
+      menuContainer.appendChild(sep);
+      continue;
+    }
+    const el = document.createElement('div');
+    el.className = 'context-menu__item' + (item.disabled ? ' disabled' : '');
+    el.innerHTML =
+      (item.icon ? `<span class="context-menu__icon">${item.icon}</span>` : '') +
+      `<span>${item.label}</span>` +
+      (item.shortcut ? `<span class="context-menu__item shortcut">${item.shortcut}</span>` : '');
+    if (item.action && !item.disabled) {
+      el.addEventListener('click', e => {
+        item.action();
+        hideContextMenu();
+        e.stopPropagation();
+      });
+    }
+    menuContainer.appendChild(el);
+  }
+  menuContainer.style.display = 'block';
+  let mx = x, my = y;
+  setTimeout(() => {
+    const rect = menuContainer.getBoundingClientRect();
+    if (mx + rect.width > window.innerWidth) mx = window.innerWidth - rect.width - 8;
+    if (my + rect.height > window.innerHeight) my = window.innerHeight - rect.height - 8;
+    menuContainer.style.left = mx + 'px';
+    menuContainer.style.top = my + 'px';
+  }, 0);
+
+  // Hide on click elsewhere or Escape
+  if (menuHideHandler) {
+    document.removeEventListener('mousedown', menuHideHandler);
+    document.removeEventListener('keydown', menuHideHandler);
+  }
+  menuHideHandler = function(e) {
+    if (e.type === 'keydown' && e.key !== 'Escape') return;
+    hideContextMenu();
+  };
+  document.addEventListener('mousedown', menuHideHandler);
+  document.addEventListener('keydown', menuHideHandler);
+}
+
+function hideContextMenu() {
+  menuContainer.style.display = 'none';
+  menuContainer.innerHTML = '';
+  if (menuHideHandler) {
+    document.removeEventListener('mousedown', menuHideHandler);
+    document.removeEventListener('keydown', menuHideHandler);
+    menuHideHandler = null;
+  }
+}
+
+// Export за модулно включване (по желание)
+window.showContextMenu = showContextMenu;
+window.hideContextMenu = hideContextMenu;
+</script>
