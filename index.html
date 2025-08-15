@@ -1,66 +1,16 @@
-<!doctype html>
-<html lang="bg">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>DP Configurator Builder – Modular</title>
-  <!-- Styles -->
-  <link rel="stylesheet" href="css/main.css" />
-  <!-- Interact.js for drag & resize -->
-  <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
-  <link rel="icon" href="favicon.png" type="image/png">
-
+  <meta charset="UTF-8">
+  <title>DP Configurator Clean Start</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="css/main.css">
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand">DP Configurator Builder · Modular</div>
-    <div class="actions">
-      <button id="btn-export" class="btn">Export JSON</button>
-      <label class="file btn">
-        <input id="file-import" type="file" accept="application/json" hidden />
-        <span>Import JSON</span>
-      </label>
-      <button id="btn-clear" class="btn">Clear</button>
-      <button id="btn-save" class="btn">Save (Local)</button>
-      <button id="btn-load" class="btn">Load (Local)</button>
-    </div>
-    <div class="alignbar">
-      <button class="btn" id="align-left">Align Left</button>
-      <button class="btn" id="align-right">Align Right</button>
-      <button class="btn" id="align-top">Align Top</button>
-      <button class="btn" id="align-bottom">Align Bottom</button>
-      <button class="btn" id="align-vcenter">V Center</button>
-      <button class="btn" id="align-hcenter">H Center</button>
-      <button class="btn" id="distribute-h">Distribute H</button>
-      <button class="btn" id="distribute-v">Distribute V</button>
-    </div>
-  </header>
-
-  <main class="layout">
-    <aside class="sidebar left">
-      <h2>Библиотека</h2>
-      <div id="palette" class="palette"></div>
-      <p class="hint">Drag & drop върху платното или клик за добавяне</p>
-    </aside>
-
-    <section id="canvas" class="canvas" aria-label="Workspace (Canvas)">
-      <div class="canvas-hint">Пусни елементи тук</div>
-      <div id="guide-v" class="guide v" style="display:none"></div>
-      <div id="guide-h" class="guide h" style="display:none"></div>
-      <div id="marquee" class="marquee" style="display:none"></div>
-    </section>
-
-    <aside class="sidebar right">
-      <h2>Свойства</h2>
-      <form id="inspector" class="inspector" autocomplete="off"></form>
-    </aside>
-  </main>
-
-  <footer class="foot">
-    <small>Drag/Resize (snap 10px) · Smart guides · Multi‑select (Shift+Click или правоъгълник) · Duplicate: Ctrl+D</small>
-  </footer>
-
-  <!-- App entry (ES modules) - keep as the last tag so the DOM exists before JS runs -->
+  <div id="canvas">
+    <div class="widget" id="simplepanel">Simple Panel</div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
   <script type="module" src="js/app.js"></script>
 </body>
 </html>
