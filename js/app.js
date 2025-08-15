@@ -1,153 +1,37 @@
-// DP Configurator Builder – App entry (ES module)
-// This file wires the UI: palette, canvas, inspector, and app-level actions.
-
-if (window.interact && !window._interactInit) {
-  window.interact('.widget').draggable({
+// app.js (ES module, minimal)
+document.addEventListener('DOMContentLoaded', () => {
+  // Drag & resize за всички .widget
+  interact('.widget').draggable({
     listeners: {
-      move (event) { event.target.style.left = (parseInt(event.target.style.left || 0) + event.dx) + 'px';
-                     event.target.style.top  = (parseInt(event.target.style.top  || 0) + event.dy) + 'px';
-                     console.log('DRAG MOVE SIMPLE', event);
+      move (event) {
+        const target = event.target;
+        let x = parseInt(target.getAttribute('data-x')) || 0;
+        let y = parseInt(target.getAttribute('data-y')) || 0;
+        x += event.dx;
+        y += event.dy;
+        target.style.transform = `translate(${x}px, ${y}px)`;
+        target.setAttribute('data-x', x);
+        target.setAttribute('data-y', y);
       }
     }
   });
-  window._interactInit = true;
-}
-
-
-
-import {
-  initCanvas,
-  createFromPalette,
-  serialize,
-  deserialize,
-  alignAPI,
-  setSelection,
-  initPaletteDnd,
-} from './core/canvas.js';
-
-import { buildPalette } from './core/widgets.js';
-import { initInspector } from './core/inspector.js';
-
-// ===== Interact.js DELEGATE глобална инициализация =====
-function setupInteractDelegated() {
-  if (window.interact && !window._interactInit) {
-    window.interact('.widget').draggable({
-      listeners: {
-        start(event)  { console.log('DRAG START (delegate)', event); },
-        move(event)   { console.log('DRAG MOVE (delegate)', event); },
-        end(event)    { console.log('DRAG END (delegate)', event); }
+  interact('.widget').resizable({
+    edges: { left: true, right: true, top: true, bottom: true },
+    listeners: {
+      move (event) {
+        let { x, y } = event.target.dataset;
+        x = parseInt(x) || 0;
+        y = parseInt(y) || 0;
+        // update the element's style
+        event.target.style.width  = event.rect.width + 'px';
+        event.target.style.height = event.rect.height + 'px';
+        // translate when resizing from top/left edges
+        x += event.deltaRect.left;
+        y += event.deltaRect.top;
+        event.target.style.transform = `translate(${x}px, ${y}px)`;
+        event.target.setAttribute('data-x', x);
+        event.target.setAttribute('data-y', y);
       }
-    });
-    window.interact('.widget').resizable({
-      edges: { left: true, right: true, top: true, bottom: true },
-      listeners: {
-        move(event) { console.log('RESIZE (delegate)', event); }
-      }
-    });
-    window._interactInit = true;
-  }
-}
-
-// ------- Utilities -------
-function toast(msg) {
-  const t = document.createElement('div');
-  t.textContent = msg;
-  Object.assign(t.style, {
-    position: 'fixed',
-    right: '16px',
-    bottom: '16px',
-    background: '#1c2436',
-    border: '1px solid #2b3550',
-    color: '#e8ecf2',
-    padding: '10px 12px',
-    borderRadius: '10px',
-    zIndex: 9999,
+    }
   });
-  document.body.appendChild(t);
-  setTimeout(() => t.remove(), 1400);
-}
-
-// ------- App bootstrap -------
-function bootstrap() {
-  // Build palette
-  const paletteRoot = document.getElementById('palette');
-  buildPalette(paletteRoot, (type) => createFromPalette(type));
-  // Enable HTML5 drag & drop from palette
-  initPaletteDnd(paletteRoot);
-
-  // Init canvas + inspector
-  initCanvas();
-  initInspector();
-
-  // === Инициализирай Interact.js (delegate) ===
-  setupInteractDelegated();
-
-  // Top actions
-  const btnExport = document.getElementById('btn-export');
-  const fileImport = document.getElementById('file-import');
-  const btnClear = document.getElementById('btn-clear');
-  const btnSave = document.getElementById('btn-save');
-  const btnLoad = document.getElementById('btn-load');
-
-  btnExport.onclick = () => {
-    const blob = new Blob([JSON.stringify(serialize(), null, 2)], {
-      type: 'application/json',
-    });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'dp-configurator.json';
-    a.click();
-    URL.revokeObjectURL(a.href);
-  };
-
-  fileImport.onchange = async (e) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    try {
-      const data = JSON.parse(await f.text());
-      deserialize(data);
-      setSelection([]);
-      toast('Imported');
-    } catch {
-      alert('Invalid JSON');
-    }
-    e.target.value = '';
-  };
-
-  btnClear.onclick = () => {
-    if (confirm('Clear canvas?')) deserialize({ version: 1, items: [] });
-  };
-
-  btnSave.onclick = () => {
-    localStorage.setItem('dp-configurator', JSON.stringify(serialize()));
-    toast('Saved');
-  };
-
-  btnLoad.onclick = () => {
-    const raw = localStorage.getItem('dp-configurator');
-    if (!raw) {
-      alert('No local data');
-      return;
-    }
-    try {
-      deserialize(JSON.parse(raw));
-      toast('Loaded');
-    } catch {
-      alert('Bad data');
-    }
-  };
-
-  // Align/Distribute buttons
-  for (const [id, fn] of Object.entries(alignAPI)) {
-    const el = document.getElementById(id);
-    if (el) el.onclick = fn;
-  }
-
- }
-
-// Run when DOM is ready (script is loaded at the end of body, but this is safe)
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', bootstrap);
-} else {
-  bootstrap();
-}
+});
