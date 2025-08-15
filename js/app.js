@@ -325,43 +325,64 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // DRAG/RESIZE с MULTI-SELECTION
-  interact('.widget').draggable({
-    listeners: {
-      move (event) {
-        const target = event.target;
-        let x = parseFloat(target.getAttribute('data-x')) || 0;
-        let y = parseFloat(target.getAttribute('data-y')) || 0;
-        x += event.dx;
-        y += event.dy;
-        // SNAPPING
-        const snapped = smartSnap(target, x, y, event);
-        x = snapped.x; y = snapped.y;
-        // MULTI-SELECTION MOVE
-        if (target.classList.contains('selected')) {
-          for (const w of document.querySelectorAll('.widget.selected')) {
-            if (w === target) continue;
-            let wx = parseFloat(w.getAttribute('data-x')) || 0;
-            let wy = parseFloat(w.getAttribute('data-y')) || 0;
-            wx += event.dx;
-            wy += event.dy;
-            w.style.transform = `translate(${wx}px, ${wy}px)`;
-            w.setAttribute('data-x', wx);
-            w.setAttribute('data-y', wy);
-          }
-        } else {
-          for (const w of document.querySelectorAll('.widget.selected')) w.classList.remove('selected');
-          target.classList.add('selected');
-        }
-        target.style.transform = `translate(${x}px, ${y}px)`;
-        target.setAttribute('data-x', x);
-        target.setAttribute('data-y', y);
-      },
-      end () {
-        hideGuides();
+  // === DRAG/RESIZE с MULTI-SELECTION (PRO style) ===
+let dragGroupStart = new Map();
+
+interact('.widget').draggable({
+  listeners: {
+    start (event) {
+      dragGroupStart.clear();
+      const target = event.target;
+      // Ако target е селектиран - група drag
+      const selected = target.classList.contains('selected')
+        ? document.querySelectorAll('.widget.selected')
+        : [target];
+      for (const w of selected) {
+        dragGroupStart.set(w, {
+          x: parseFloat(w.getAttribute('data-x')) || 0,
+          y: parseFloat(w.getAttribute('data-y')) || 0
+        });
       }
+    },
+    move (event) {
+      const target = event.target;
+      // Винаги работим с група, дори да е само един
+      const group = dragGroupStart.size
+        ? Array.from(dragGroupStart.keys())
+        : [target];
+
+      for (const w of group) {
+        const start = dragGroupStart.get(w) || {
+          x: parseFloat(w.getAttribute('data-x')) || 0,
+          y: parseFloat(w.getAttribute('data-y')) || 0
+        };
+        let x = start.x + event.dx;
+        let y = start.y + event.dy;
+        // Smart snap само за target
+        if (w === target) {
+          const snapped = smartSnap(target, x, y, event);
+          x = snapped.x; y = snapped.y;
+          // Изчисли delta между snapнатия target и началната му позиция
+          var dx = x - start.x;
+          var dy = y - start.y;
+        }
+        // Всички останали местим със същия dx, dy
+        if (w !== target) {
+          x = start.x + dx;
+          y = start.y + dy;
+        }
+        w.style.transform = `translate(${x}px, ${y}px)`;
+        w.setAttribute('data-x', x);
+        w.setAttribute('data-y', y);
+      }
+    },
+    end () {
+      hideGuides();
+      dragGroupStart.clear();
     }
-  });
+  }
+});
+
   interact('.widget').resizable({
     edges: { left: true, right: true, top: true, bottom: true },
     listeners: {
