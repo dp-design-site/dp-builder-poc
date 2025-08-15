@@ -63,6 +63,6 @@ body {
   display: flex;
   align-items: center;
   gap: 16px;
-  height: 48px; /* фиксирана височина, можеш да я коригираш */
+  height: 25px; /* фиксирана височина, можеш да я коригираш */
 }
 
