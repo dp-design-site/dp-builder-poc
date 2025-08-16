@@ -134,3 +134,66 @@ export function smartSnap(target, nx, ny, event = {}) {
 
   return { x: snappedX, y: snappedY };
 }
+export function snapResize(event, start, moving, options = {}) {
+  const tol = SNAP_TOL;
+  const target = event.target;
+
+  // предложени стойности
+  let x = start.x + event.deltaRect.left;
+  let y = start.y + event.deltaRect.top;
+  let w = start.w + event.deltaRect.width;
+  let h = start.h + event.deltaRect.height;
+
+  let left   = x;
+  let right  = x + w;
+  let top    = y;
+  let bottom = y + h;
+
+  if (SNAP_ENABLED && !event.shiftKey) {
+    for (const other of allWidgets(target)) {
+      const or = getRect(other);
+
+      // хоризонтални ръбове
+      if (SNAP_EDGES) {
+        if (moving.left) {
+          if (Math.abs(left - or.left) < tol) left = or.left;
+          if (Math.abs(left - or.right) < tol) left = or.right;
+        }
+        if (moving.right) {
+          if (Math.abs(right - or.left) < tol) right = or.left;
+          if (Math.abs(right - or.right) < tol) right = or.right;
+        }
+      }
+      // вертикални ръбове
+      if (SNAP_EDGES) {
+        if (moving.top) {
+          if (Math.abs(top - or.top) < tol) top = or.top;
+          if (Math.abs(top - or.bottom) < tol) top = or.bottom;
+        }
+        if (moving.bottom) {
+          if (Math.abs(bottom - or.top) < tol) bottom = or.top;
+          if (Math.abs(bottom - or.bottom) < tol) bottom = or.bottom;
+        }
+      }
+    }
+  }
+
+  // преизчисляване на x,y,w,h спрямо фиксираните ръбове
+  if (moving.left && !moving.right) {
+    x = left; w = start.right - left;
+  } else if (moving.right && !moving.left) {
+    x = start.x; w = right - start.x;
+  } else {
+    x = left; w = right - left;
+  }
+
+  if (moving.top && !moving.bottom) {
+    y = top; h = start.bottom - top;
+  } else if (moving.bottom && !moving.top) {
+    y = start.y; h = bottom - start.y;
+  } else {
+    y = top; h = bottom - top;
+  }
+
+  return { x, y, w, h };
+}
