@@ -22,7 +22,8 @@ body {
   background: #232c40;
   border-radius: 14px;
   box-shadow: 0 6px 24px #0002;
-  border: 2px solid #2a2f44;
+  border: 0,5px solid #2a2f44;
+  box-sizing: border-box;
   color: #fff;
   font-size: 24px;
   display: flex;
@@ -31,6 +32,7 @@ body {
   cursor: move;
   user-select: none;
   /* no left/top! */
+  
 }
 #guide-v, #guide-h {
   background: #38A7DA;
