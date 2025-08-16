@@ -1,4 +1,4 @@
-// js/core/constraints.js
+// js/core/constraints.js (updated)
 // Визуален слой + мод за създаване/изтриване на констрайнти. Ползва constraints-engine.
 import { createConstraint, deleteConstraint, getConstraintsForElement, applyConstraintsFor } from './constraints-engine.js';
 
@@ -17,7 +17,7 @@ const AXES = {
 function setPos(el, x, y){ el.style.transform = `translate(${x}px, ${y}px)`; el.setAttribute('data-x', x); el.setAttribute('data-y', y); }
 function getRect(el){ const x=parseFloat(el.getAttribute('data-x'))||0; const y=parseFloat(el.getAttribute('data-y'))||0; const w=el.getBoundingClientRect().width; const h=el.getBoundingClientRect().height; return {left:x,right:x+w,top:y,bottom:y+h,centerX:x+w/2,centerY:y+h/2}; }
 
-// ---- Cursor helper line ----
+// ---- Cursor helper line (не скриваме системния курсор) ----
 function ensureCursor(){
   if (state.cursorEl) return state.cursorEl;
   const d = document.createElement('div');
@@ -38,7 +38,7 @@ function updateCursor(e){
     const el = ensureCursor();
     el.style.height = '1px'; el.style.width = '100vw'; el.style.background = '#49c0ff';
     el.style.top = e.clientY + 'px'; el.style.left = 0;
-  }
+  } else { hideCursor(); }
 }
 function hideCursor(){ if (state.cursorEl){ state.cursorEl.remove(); state.cursorEl=null; } }
 
@@ -63,7 +63,6 @@ function hideAnchorPicker(){ if (state.anchorPicker){ state.anchorPicker.remove(
 
 // ---- Indicators over selected element ----
 function renderIndicators(){
-  // чистим всички стари
   document.querySelectorAll('.constraint-badge').forEach(n=>n.remove());
   const selected = document.querySelector('.widget.selected');
   if (!selected) return;
@@ -93,12 +92,22 @@ function observeSelectionChanges(){
   obs.observe(canvas, { subtree:true, attributes:true, attributeFilter:['class'] });
 }
 
-// ---- Mode handling ----
+// ---- Mode handling (без скриване на курсора) ----
 function setMode(mode){
-  if (state.mode === mode) return; // идемпотентно
+  if (state.mode === mode) return;
+
+  // изчисти предишния режим
+  hideCursor();
+  document.removeEventListener('mousemove', updateCursor);
+  hideAnchorPicker();
+  state.pending = null;
+
   state.mode = mode;
-  if (mode === 'none'){ hideCursor(); hideAnchorPicker(); state.pending=null; document.body.style.cursor=''; }
-  else { document.addEventListener('mousemove', updateCursor); document.body.style.cursor='none'; }
+  if (mode !== 'none') {
+    document.addEventListener('mousemove', updateCursor);
+  }
+  // извести рибона/други UI
+  window.dispatchEvent(new CustomEvent('constraints:mode', { detail: { mode } }));
 }
 function getMode(){ return state.mode; }
 
@@ -113,7 +122,6 @@ function onCanvasClick(e){
     if (!state.pending){
       state.pending = { el: widget, anchor };
     } else {
-      // създаваме констрайнт: pending → widget
       const a = state.pending, b = { el: widget, anchor };
       createConstraint(a.el, a.anchor, b.el, b.anchor);
       applyConstraintsFor(a.el.id);
@@ -127,7 +135,6 @@ export function initConstraints(){
   document.addEventListener('click', onCanvasClick);
   document.addEventListener('keydown', (e)=>{ if (e.key==='Escape') setMode('none'); });
   observeSelectionChanges();
-  // първи рендер ако вече има селекция
   renderIndicators();
 }
 
