@@ -1,17 +1,13 @@
 <!-- components/ribbon.html -->
-<div id="dp-ribbon" class="dp-ribbon">
-  <div class="dp-ribbon-row">
-    <div class="dp-ribbon-tab active" data-tab="constraints">Constraints</div>
-    <!-- бъдещи табове: Arrange, Widgets, View, ... -->
-  </div>
-  <div class="dp-ribbon-row dp-ribbon-tools" data-tab-content="constraints">
+<div id="dp-ribbon" class="dp-ribbon one-line">
+  <div class="dp-ribbon-tools" data-tab-content="constraints">
     <div class="group">
       <div class="group-title">Align</div>
-      <button class="tool" id="tool-align-vertical" title="Vertical Align (Constr.)">
+      <button class="tool" id="tool-align-vertical" title="Vertical Align (Constraint)">
         <span class="icon">│</span>
         <span>Vertical</span>
       </button>
-      <button class="tool" id="tool-align-horizontal" title="Horizontal Align (Constr.)">
+      <button class="tool" id="tool-align-horizontal" title="Horizontal Align (Constraint)">
         <span class="icon">─</span>
         <span>Horizontal</span>
       </button>
@@ -20,40 +16,46 @@
 </div>
 
 <style>
-  .dp-ribbon { position: fixed; top: 0; left: 0; right: 0; height: 120px; z-index: 10000;
+  .dp-ribbon.one-line { position: fixed; top: 0; left: 0; right: 0; height: 56px; z-index: 10000;
     background: linear-gradient(180deg, #2a3147, #232a3a); border-bottom: 1px solid #1b2234; color: #eaeef7;
-    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; }
-  .dp-ribbon-row { display: flex; align-items: center; gap: 12px; padding: 6px 12px; }
-  .dp-ribbon-tab { padding: 6px 10px; border-radius: 6px; cursor: pointer; opacity: .9; }
-  .dp-ribbon-tab.active { background: #2f3852; opacity: 1; }
-  .dp-ribbon-tools { display: flex; gap: 24px; padding-top: 8px; }
-  .group { display: inline-flex; align-items: stretch; gap: 8px; background: #21283a; border: 1px solid #2b3450; border-radius: 10px; padding: 10px; }
-  .group-title { font-size: 12px; opacity: .8; margin-right: 8px; align-self: center; }
-  .tool { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
-    width: 84px; height: 68px; background: #26304a; border: 1px solid #313a57; border-radius: 10px; cursor: pointer; }
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; display:flex; align-items:center; }
+  .dp-ribbon-tools { display: flex; gap: 14px; padding: 8px 12px; }
+  .group { display: inline-flex; align-items: center; gap: 8px; background: #21283a; border: 1px solid #2b3450; border-radius: 10px; padding: 6px 8px; }
+  .group-title { font-size: 12px; opacity: .85; margin-right: 6px; }
+  .tool { display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 10px;
+    background: #26304a; border: 1px solid #313a57; border-radius: 8px; cursor: pointer; font-size: 13px; }
+  .tool .icon { font-size: 18px; line-height: 1; }
   .tool:hover { background: #2d3856; }
-  .tool .icon { font-size: 22px; line-height: 1; }
-
-  /* За да не покрива напълно платното: ще оставим да се припокриват; по-късно можем да вдигнем canvas padding-top */
+  .tool.active { background: #3a4670; border-color: #4a5b8f; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06); }
 </style>
 
 <script>
 (function(){
   function ensureConstraintsAPI(){
-    if (!window.Constraints || typeof window.Constraints.setMode !== 'function') {
-      console.warn('[ribbon] Constraints API not ready');
-      return false;
-    }
-    return true;
+    return !!(window.Constraints && typeof window.Constraints.setMode === 'function');
+  }
+  const btnV = document.getElementById('tool-align-vertical');
+  const btnH = document.getElementById('tool-align-horizontal');
+
+  function setActive(mode){
+    btnV?.classList.toggle('active', mode === 'alignV');
+    btnH?.classList.toggle('active', mode === 'alignH');
   }
 
-  document.getElementById('tool-align-vertical')?.addEventListener('click', () => {
+  btnV?.addEventListener('click', () => {
     if (!ensureConstraintsAPI()) return;
-    window.Constraints.setMode(window.Constraints.getMode() === 'alignV' ? 'none' : 'alignV');
+    const m = window.Constraints.getMode();
+    window.Constraints.setMode(m === 'alignV' ? 'none' : 'alignV');
   });
-  document.getElementById('tool-align-horizontal')?.addEventListener('click', () => {
+  btnH?.addEventListener('click', () => {
     if (!ensureConstraintsAPI()) return;
-    window.Constraints.setMode(window.Constraints.getMode() === 'alignH' ? 'none' : 'alignH');
+    const m = window.Constraints.getMode();
+    window.Constraints.setMode(m === 'alignH' ? 'none' : 'alignH');
   });
+
+  // синхронизация при промяна на режима от другаде
+  window.addEventListener('constraints:mode', (e)=> setActive(e.detail.mode));
+  // начален state
+  setTimeout(()=>{ if (ensureConstraintsAPI()) setActive(window.Constraints.getMode()); }, 0);
 })();
 </script>
