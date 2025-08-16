@@ -1,4 +1,4 @@
-// js/core/constraints.js — Click→Click (без въпроси), с визуални хендъли за ръб/ъгъл/център
+// js/core/constraints.js — Click→Click (без въпроси), с визуални хендъли за ръб/център; показваме само върху hover елемента и върху първия избран
 import { createConstraint, deleteConstraint, getConstraintsForElement, applyConstraintsFor } from './constraints-engine.js';
 
 const state = {
@@ -6,11 +6,6 @@ const state = {
   firstPick: null,         // { el, anchor }
   cursorLine: null,
   hoverEl: null,
-};
-
-const AXES = {
-  alignV: { axis: 'x', anchors: ['left','centerX','right'] },
-  alignH: { axis: 'y', anchors: ['top','centerY','bottom'] },
 };
 
 const OK_X = ['left','centerX','right'];
@@ -80,7 +75,7 @@ function anchorsForMode(mode){
 }
 
 function addHandlesTo(el){
-  // ако вече има хендъли (напр. върху firstPick), не ги подменяй — пазим маркировката
+  // ако вече има хендъли (напр. върху firstPick), не ги подменяме — пазим маркировката
   if (el.querySelector('.c-handle')) return;
   const r = getRect(el);
   const anchors = anchorsForMode(state.mode);
@@ -97,6 +92,7 @@ function addHandlesTo(el){
     const h = document.createElement('div');
     h.className = 'c-handle';
     h.dataset.anchor = name;
+    // вътрешни координати
     h.style.left = (d.x - r.left) + 'px';
     h.style.top  = (d.y - r.top) + 'px';
     h.title = name;
@@ -107,9 +103,8 @@ function addHandlesTo(el){
   });
 }
 
-function removeHandlesFrom(el){ el?.querySelectorAll('.c-handle').forEach(n=>n.remove()); }
-
-function removeAllHandles(){ document.querySelectorAll('.c-handle').forEach(n=>n.remove()); }(el){ el?.querySelectorAll('.c-handle').forEach(n=>n.remove()); }
+function removeHandlesFrom(el){ if(!el) return; el.querySelectorAll('.c-handle').forEach(n=>n.remove()); }
+function removeAllHandles(){ document.querySelectorAll('.c-handle').forEach(n=>n.remove()); }
 
 function setHoverEl(el){
   if (state.hoverEl === el) return;
@@ -126,12 +121,18 @@ function pickAnchor(el, anchor, handleEl){
   handleEl?.classList.add('pick');
   if (!state.firstPick){ state.firstPick = { el, anchor }; return; }
 
-  const a = state.firstPick, b = { el, anchor };
+  // Втора селекция → създаваме констрайнт
+  const a = state.firstPick;         // първи клик (ще го местим)
+  const b = { el, anchor };          // втори клик (референт)
+
+  // В режим alignV/alignH приемаме само релевантни анкери
   if (state.mode==='alignV' && !(OK_X.includes(a.anchor) && OK_X.includes(b.anchor))) { resetPick(); return; }
   if (state.mode==='alignH' && !(OK_Y.includes(a.anchor) && OK_Y.includes(b.anchor))) { resetPick(); return; }
 
-  createConstraint(a.el, a.anchor, b.el, b.anchor);
-  applyConstraintsFor(a.el.id);
+  // Swap: местим ПЪРВИЯ към ВТОРИЯ → вторият е референт (A), първият е зависим (B)
+  createConstraint(b.el, b.anchor, a.el, a.anchor);
+  applyConstraintsFor(b.el.id);
+
   resetPick();
 }
 
@@ -155,9 +156,11 @@ function renderIndicators(){
     badge.style.fontSize='11px'; badge.style.padding='2px 6px'; badge.style.borderRadius='6px';
     badge.style.top = '-22px'; badge.style.left = (4 + i*80) + 'px';
     badge.textContent = `${c.b.anchor} = ${c.a.anchor}`;
+
     const del = document.createElement('span'); del.textContent=' ✕'; del.style.cursor='pointer'; del.style.marginLeft='6px'; del.style.opacity='.8';
     del.addEventListener('pointerdown', (e)=>{ e.stopPropagation(); e.preventDefault(); deleteConstraint(c.id); renderIndicators(); });
     badge.appendChild(del);
+
     selected.appendChild(badge); i++;
   }
 }
@@ -170,7 +173,7 @@ function observeSelectionChanges(){
 }
 
 // ---- Mode handling ----
-function setMode(mode){
+export function setMode(mode){
   if (state.mode === mode) return;
   hideCursorLine();
   document.removeEventListener('mousemove', updateCursorLine);
@@ -179,7 +182,6 @@ function setMode(mode){
   document.body.classList.toggle('constraints-mode', mode !== 'none');
 
   if (mode === 'none'){
-    // пълно почистване при излизане
     resetPick();
     removeAllHandles();
   } else {
@@ -188,9 +190,8 @@ function setMode(mode){
     document.addEventListener('mousemove', handleHoverMove, { passive: true });
   }
   window.dispatchEvent(new CustomEvent('constraints:mode', { detail: { mode } }));
-}(new CustomEvent('constraints:mode', { detail: { mode } }));
 }
-function getMode(){ return state.mode; }
+export function getMode(){ return state.mode; }
 
 function handleHoverMove(e){
   const el = document.elementFromPoint(e.clientX, e.clientY)?.closest('.widget');
@@ -199,7 +200,6 @@ function handleHoverMove(e){
 }
 
 export function initConstraints(){
-  // не пречим на нормалните кликове; хендълите сами stopPropagation
   document.addEventListener('keydown', (e)=>{ if (e.key==='Escape') { setMode('none'); } });
   observeSelectionChanges();
   renderIndicators();
@@ -207,4 +207,3 @@ export function initConstraints(){
 
 // Expose глобално за рибона
 window.Constraints = { init: initConstraints, setMode, getMode, getConstraintsForElement };
-
