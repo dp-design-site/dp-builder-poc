@@ -2,6 +2,8 @@ import './core/component-loader.js'; // дефинира window.loadComponent
 import { initSelection } from './core/selection.js';
 import { smartSnap, hideGuides, updateGuideStyles, setSnapOptions } from './core/snap.js';
 import { groupSelected, ungroupSelected, copySelected, pasteClipboard, duplicateSelected, deleteSelected } from './actions/context-actions.js';
+import './core/constraints-engine.js';
+import './core/constraints.js';
 
 // ==============================
 // Локално състояние за snap (временно, докато финализираме resize snap)
@@ -88,6 +90,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Selection
   initSelection();
+
+  // Ribbon mount
+  loadComponent('body', 'components/ribbon.html').then(() => {
+    window.Constraints?.init();
+  });
 
   // === DRAG/RESIZE с MULTI-SELECTION ===
   let dragGroupStart = new Map();
