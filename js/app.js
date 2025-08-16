@@ -110,87 +110,63 @@ document.addEventListener('DOMContentLoaded', () => {
     },
     move (event) {
       const start = event.interaction._resizeStart;
-      const moving = event.edges || {}; // {left?, right?, top?, bottom?}
+      // някои версии на interact не подават event.edges – правим fallback
+      const moving = event.edges || {
+        left:   event.deltaRect.left   !== 0,
+        right:  event.deltaRect.right  !== 0,
+        top:    event.deltaRect.top    !== 0,
+        bottom: event.deltaRect.bottom !== 0
+      };
 
-      // 1) Предложени стойности (без писане в DOM)
+      // предложени стойности (без DOM writes)
       let x = start.x + event.deltaRect.left;
       let y = start.y + event.deltaRect.top;
       let w = start.w + event.deltaRect.width;
       let h = start.h + event.deltaRect.height;
 
-      // 2) Кандидат-ръбове
       let left   = x;
       let right  = x + w;
       let top    = y;
       let bottom = y + h;
 
-      // 3) SNAP САМО за движещите се ръбове (намалява jitter)
+      // SNAP само за активните ръбове – намалява jitter
       const tol = SNAP_TOL;
       if (SNAP_ENABLED && !event.shiftKey) {
         for (const other of allWidgets(event.target)) {
           const or = getRect(other);
 
-          // хоризонтални ръбове
           if (SNAP_EDGES) {
             if (moving.left) {
-              for (const ox of [or.left, or.right]) {
-                if (Math.abs(left - ox) < tol) { left = ox; }
-              }
+              if (Math.abs(left - or.left)   < tol) left = or.left;
+              if (Math.abs(left - or.right)  < tol) left = or.right;
             }
             if (moving.right) {
-              for (const ox of [or.left, or.right]) {
-                if (Math.abs(right - ox) < tol) { right = ox; }
-              }
+              if (Math.abs(right - or.left)  < tol) right = or.left;
+              if (Math.abs(right - or.right) < tol) right = or.right;
             }
-          }
-          // по време на resize център-снап често води до тресене → по желание го изключи
-          // ако държиш да го имаш, активирай само за moving.right|left, но внимателно.
-          // if (SNAP_CENTERS && (moving.left || moving.right)) { ... }
-
-          // вертикални ръбове
-          if (SNAP_EDGES) {
             if (moving.top) {
-              for (const oy of [or.top, or.bottom]) {
-                if (Math.abs(top - oy) < tol) { top = oy; }
-              }
+              if (Math.abs(top - or.top)     < tol) top = or.top;
+              if (Math.abs(top - or.bottom)  < tol) top = or.bottom;
             }
             if (moving.bottom) {
-              for (const oy of [or.top, or.bottom]) {
-                if (Math.abs(bottom - oy) < tol) { bottom = oy; }
-              }
+              if (Math.abs(bottom - or.top)  < tol) bottom = or.top;
+              if (Math.abs(bottom - or.bottom) < tol) bottom = or.bottom;
             }
           }
-          // if (SNAP_CENTERS && (moving.top || moving.bottom)) { ... }
+          // център-­snap при resize често причинява трептене – препоръчвам да го изключим за момента
         }
       }
 
-      // 4) Рекомпозиция според фиксирания ръб
-      // хоризонтално
-      if (moving.left && !moving.right) {
-        x = left;
-        w = start.right - left;
-      } else if (moving.right && !moving.left) {
-        x = start.x;
-        w = right - start.x;
-      } else {
-        // и двата ръба (рядко): приоритизираме right
-        x = left;
-        w = right - left;
-      }
+      // фиксираме неподвижния ръб спрямо стартовия rect
+      if (moving.left && !moving.right) { x = left;        w = start.right  - left;  }
+      else if (moving.right && !moving.left) { x = start.x;    w = right - start.x;    }
+      else { x = left; w = right - left; } // и двата – рядко
 
-      // вертикално
-      if (moving.top && !moving.bottom) {
-        y = top;
-        h = start.bottom - top;
-      } else if (moving.bottom && !moving.top) {
-        y = start.y;
-        h = bottom - start.y;
-      } else {
-        y = top;
-        h = bottom - top;
-      }
+      if (moving.top && !moving.bottom) { y = top;         h = start.bottom - top;   }
+      else if (moving.bottom && !moving.top) { y = start.y;    h = bottom - start.y;   }
+      else { y = top;  h = bottom - top; }
 
-      // 5) Минимални размери + писане в DOM (еднократно)
+      // минимални размери + еднократен DOM write
       w = Math.max(40, w);
       h = Math.max(40, h);
 
@@ -200,13 +176,9 @@ document.addEventListener('DOMContentLoaded', () => {
       event.target.style.width  = w + 'px';
       event.target.style.height = h + 'px';
 
-      // Гайдове — показваме само ако съответният ръб е снапнал
-      // (по-добра визуална стабилност; тук ги скриваме изцяло, може да върнеш логика при нужда)
-      hideGuides();
+      hideGuides(); // държим UI стабилен; ако искаш, можем да показваме guide за точно снапнатия ръб
     },
-    end () {
-      hideGuides();
-    }
+    end () { hideGuides(); }
   }
 });
 
