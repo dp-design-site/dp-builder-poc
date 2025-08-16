@@ -5,6 +5,7 @@ const state = {
   mode: 'none',            // 'none' | 'alignV' | 'alignH'
   firstPick: null,         // { el, anchor }
   cursorLine: null,
+  hoverEl: null,
 };
 
 const AXES = {
@@ -12,7 +13,8 @@ const AXES = {
   alignH: { axis: 'y', anchors: ['top','centerY','bottom'] },
 };
 
-const ALL_ANCHORS = ['left','right','top','bottom','centerX','centerY','cornerTL','cornerTR','cornerBL','cornerBR'];
+const OK_X = ['left','centerX','right'];
+const OK_Y = ['top','centerY','bottom'];
 
 // ---- Utils ----
 function getXY(el){
@@ -53,91 +55,78 @@ function updateCursorLine(e){
 }
 function hideCursorLine(){ if (state.cursorLine){ state.cursorLine.remove(); state.cursorLine=null; } }
 
-// ---- Handles (хендъли) върху widgetите ----
+// ---- Handle styles + hit area ----
 function injectHandleStyles(){
   if (document.getElementById('constraint-handle-style')) return;
   const s = document.createElement('style');
   s.id = 'constraint-handle-style';
   s.textContent = `
-    .c-handle{position:absolute; z-index:999; background:#49c0ff; opacity:.85; border-radius:3px; box-shadow:0 0 0 1px rgba(0,0,0,.25);}
-    .c-handle.edge{width:6px;height:6px}
-    .c-handle.center{width:8px;height:8px}
-    .c-handle.corner{width:8px;height:8px}
-    .c-handle.hover{opacity:1}
-    .c-handle.pick{background:#ffd257;}
+    body.constraints-mode .widget{ cursor: crosshair !important; }
+    body.constraints-mode .widget *, body.constraints-mode .widget::before, body.constraints-mode .widget::after{ pointer-events:none; }
+    body.constraints-mode .widget .c-handle{ pointer-events:auto !important; }
+
+    .c-handle{position:absolute; z-index:999; background:#49c0ff; opacity:.7; border-radius:50%; box-shadow:0 0 0 1px rgba(0,0,0,.25); width:16px; height:16px; transform: translate(-50%, -50%);}
+    .c-handle.small-dot{width:8px;height:8px}
+    .c-handle.hover{opacity:1; transform: translate(-50%, -50%) scale(1.15);}    
+    .c-handle.pick{background:#ffd257; opacity:1;}
   `;
   document.head.appendChild(s);
 }
 
-function relevantAnchorsForMode(mode){
-  if (mode==='alignV') return ['left','centerX','right'];
-  if (mode==='alignH') return ['top','centerY','bottom'];
-  return ALL_ANCHORS;
+function anchorsForMode(mode){
+  if (mode==='alignV') return OK_X;
+  if (mode==='alignH') return OK_Y;
+  return [...OK_X, ...OK_Y];
 }
 
 function addHandlesTo(el){
   removeHandlesFrom(el);
-  const rect = getRect(el);
-  const anchors = relevantAnchorsForMode(state.mode);
-
-  const defs = {
-    left:     { x: rect.left,  y: rect.centerY, cls:'edge' },
-    right:    { x: rect.right, y: rect.centerY, cls:'edge' },
-    top:      { x: rect.centerX, y: rect.top,    cls:'edge' },
-    bottom:   { x: rect.centerX, y: rect.bottom, cls:'edge' },
-    centerX:  { x: rect.centerX, y: rect.centerY, cls:'center' },
-    centerY:  { x: rect.centerX, y: rect.centerY, cls:'center' },
-    cornerTL: { x: rect.left,  y: rect.top,    cls:'corner' },
-    cornerTR: { x: rect.right, y: rect.top,    cls:'corner' },
-    cornerBL: { x: rect.left,  y: rect.bottom, cls:'corner' },
-    cornerBR: { x: rect.right, y: rect.bottom, cls:'corner' },
+  const r = getRect(el);
+  const anchors = anchorsForMode(state.mode);
+  const map = {
+    left:     { x: r.left,      y: r.centerY },
+    right:    { x: r.right,     y: r.centerY },
+    top:      { x: r.centerX,   y: r.top },
+    bottom:   { x: r.centerX,   y: r.bottom },
+    centerX:  { x: r.centerX,   y: r.centerY },
+    centerY:  { x: r.centerX,   y: r.centerY },
   };
-
-  for (const name of anchors){
-    const d = defs[name]; if (!d) continue;
+  anchors.forEach(name=>{
+    const d = map[name]; if(!d) return;
     const h = document.createElement('div');
-    h.className = `c-handle ${d.cls}`;
+    h.className = 'c-handle';
     h.dataset.anchor = name;
-    // позиционираме спрямо вътрешната координата на елемента
-    h.style.left = (d.x - rect.left - (h.offsetWidth||4)/2) + 'px';
-    h.style.top  = (d.y - rect.top  - (h.offsetHeight||4)/2) + 'px';
+    // вътрешни координати
+    h.style.left = (d.x - r.left) + 'px';
+    h.style.top  = (d.y - r.top) + 'px';
     h.title = name;
-
     h.addEventListener('mouseenter', ()=> h.classList.add('hover'));
     h.addEventListener('mouseleave', ()=> h.classList.remove('hover'));
-    h.addEventListener('click', (e)=>{ e.stopPropagation(); pickAnchor(el, name, h); });
-
+    h.addEventListener('pointerdown', (e)=>{ e.stopPropagation(); e.preventDefault(); pickAnchor(el, name, h); });
     el.appendChild(h);
-  }
-}
-
-function removeHandlesFrom(el){
-  el.querySelectorAll('.c-handle').forEach(n=>n.remove());
-}
-
-function refreshAllHandles(){
-  document.querySelectorAll('.widget').forEach(el=>{
-    if (state.mode==='none') removeHandlesFrom(el); else addHandlesTo(el);
   });
+}
+
+function removeHandlesFrom(el){ el?.querySelectorAll('.c-handle').forEach(n=>n.remove()); }
+
+function setHoverEl(el){
+  if (state.hoverEl === el) return;
+  // пазим хендълите на firstPick елемент, за да не изчезват
+  const keep = state.firstPick?.el;
+  document.querySelectorAll('.widget').forEach(w=>{ if (w!==keep) removeHandlesFrom(w); });
+  state.hoverEl = el;
+  if (el) addHandlesTo(el);
 }
 
 // ---- Pick anchors with click→click ----
 function pickAnchor(el, anchor, handleEl){
-  // визуална индикация
   document.querySelectorAll('.c-handle.pick').forEach(n=>n.classList.remove('pick'));
   handleEl?.classList.add('pick');
+  if (!state.firstPick){ state.firstPick = { el, anchor }; return; }
 
-  if (!state.firstPick){
-    state.firstPick = { el, anchor };
-    return; // чакаме втория клик
-  }
-  // вторият клик→създаваме констрайнт
   const a = state.firstPick, b = { el, anchor };
-  // Нормализирай спрямо режим: ако е alignV, позволяваме само x anchors; alignH→y anchors
-  const okX = ['left','centerX','right'];
-  const okY = ['top','centerY','bottom'];
-  if (state.mode==='alignV' && !(okX.includes(a.anchor) && okX.includes(b.anchor))) { resetPick(); return; }
-  if (state.mode==='alignH' && !(okY.includes(a.anchor) && okY.includes(b.anchor))) { resetPick(); return; }
+  if (state.mode==='alignV' && !(OK_X.includes(a.anchor) && OK_X.includes(b.anchor))) { resetPick(); return; }
+  if (state.mode==='alignH' && !(OK_Y.includes(a.anchor) && OK_Y.includes(b.anchor))) { resetPick(); return; }
 
   createConstraint(a.el, a.anchor, b.el, b.anchor);
   applyConstraintsFor(a.el.id);
@@ -164,11 +153,9 @@ function renderIndicators(){
     badge.style.fontSize='11px'; badge.style.padding='2px 6px'; badge.style.borderRadius='6px';
     badge.style.top = '-22px'; badge.style.left = (4 + i*80) + 'px';
     badge.textContent = `${c.b.anchor} = ${c.a.anchor}`;
-
     const del = document.createElement('span'); del.textContent=' ✕'; del.style.cursor='pointer'; del.style.marginLeft='6px'; del.style.opacity='.8';
-    del.addEventListener('click', ()=>{ deleteConstraint(c.id); renderIndicators(); });
+    del.addEventListener('pointerdown', (e)=>{ e.stopPropagation(); e.preventDefault(); deleteConstraint(c.id); renderIndicators(); });
     badge.appendChild(del);
-
     selected.appendChild(badge); i++;
   }
 }
@@ -183,26 +170,35 @@ function observeSelectionChanges(){
 // ---- Mode handling ----
 function setMode(mode){
   if (state.mode === mode) return;
-  // clean old
   hideCursorLine();
   document.removeEventListener('mousemove', updateCursorLine);
   resetPick();
   state.mode = mode;
+  document.body.classList.toggle('constraints-mode', mode !== 'none');
 
   if (mode !== 'none'){
     injectHandleStyles();
     document.addEventListener('mousemove', updateCursorLine);
   }
-  refreshAllHandles();
+  // започни да следиш hover за показване на хендъли само върху близкия елемент
+  if (mode !== 'none') {
+    document.addEventListener('mousemove', handleHoverMove, { passive: true });
+  } else {
+    document.removeEventListener('mousemove', handleHoverMove);
+    setHoverEl(null);
+  }
   window.dispatchEvent(new CustomEvent('constraints:mode', { detail: { mode } }));
 }
 function getMode(){ return state.mode; }
 
-// Клик по платното: ако не кликнем върху хендъл, не правим нищо (оставяме drag/selection да действат)
-function onCanvasClick(e){ /* no-op; click се хваща от .c-handle */ }
+function handleHoverMove(e){
+  const el = document.elementFromPoint(e.clientX, e.clientY)?.closest('.widget');
+  if (!el) { setHoverEl(null); return; }
+  setHoverEl(el);
+}
 
 export function initConstraints(){
-  document.addEventListener('click', onCanvasClick);
+  // не пречим на нормалните кликове; хендълите сами stopPropagation
   document.addEventListener('keydown', (e)=>{ if (e.key==='Escape') { setMode('none'); } });
   observeSelectionChanges();
   renderIndicators();
@@ -210,3 +206,4 @@ export function initConstraints(){
 
 // Expose глобално за рибона
 window.Constraints = { init: initConstraints, setMode, getMode, getConstraintsForElement };
+
