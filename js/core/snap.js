@@ -134,11 +134,12 @@ export function smartSnap(target, nx, ny, event = {}) {
 
   return { x: snappedX, y: snappedY };
 }
-export function snapResize(event, start, moving, options = {}) {
+// В core/snap.js
+export function snapResize(event, start, moving) {
+  // moving: {left?:bool,right?:bool,top?:bool,bottom?:bool}
   const tol = SNAP_TOL;
-  const target = event.target;
 
-  // предложени стойности
+  // 1) Кандидат стойности (без DOM writes)
   let x = start.x + event.deltaRect.left;
   let y = start.y + event.deltaRect.top;
   let w = start.w + event.deltaRect.width;
@@ -149,51 +150,61 @@ export function snapResize(event, start, moving, options = {}) {
   let top    = y;
   let bottom = y + h;
 
+  // 2) Снап само на активните ръбове (без центрове за стабилност)
   if (SNAP_ENABLED && !event.shiftKey) {
-    for (const other of allWidgets(target)) {
+    for (const other of allWidgets(event.target)) {
       const or = getRect(other);
 
       // хоризонтални ръбове
       if (SNAP_EDGES) {
         if (moving.left) {
-          if (Math.abs(left - or.left) < tol) left = or.left;
-          if (Math.abs(left - or.right) < tol) left = or.right;
+          if (Math.abs(left - or.left)  < tol) left  = or.left;
+          if (Math.abs(left - or.right) < tol) left  = or.right;
         }
         if (moving.right) {
-          if (Math.abs(right - or.left) < tol) right = or.left;
+          if (Math.abs(right - or.left)  < tol) right = or.left;
           if (Math.abs(right - or.right) < tol) right = or.right;
         }
       }
+
       // вертикални ръбове
       if (SNAP_EDGES) {
         if (moving.top) {
-          if (Math.abs(top - or.top) < tol) top = or.top;
-          if (Math.abs(top - or.bottom) < tol) top = or.bottom;
+          if (Math.abs(top - or.top)    < tol) top    = or.top;
+          if (Math.abs(top - or.bottom) < tol) top    = or.bottom;
         }
         if (moving.bottom) {
-          if (Math.abs(bottom - or.top) < tol) bottom = or.top;
+          if (Math.abs(bottom - or.top)    < tol) bottom = or.top;
           if (Math.abs(bottom - or.bottom) < tol) bottom = or.bottom;
         }
       }
     }
   }
 
-  // преизчисляване на x,y,w,h спрямо фиксираните ръбове
+  // 3) Рекомпозиция спрямо фиксирания ръб (другият остава от стартовия rect)
   if (moving.left && !moving.right) {
-    x = left; w = start.right - left;
+    x = left;               w = start.right  - left;
   } else if (moving.right && !moving.left) {
-    x = start.x; w = right - start.x;
-  } else {
-    x = left; w = right - left;
+    x = start.x;            w = right - start.x;
+  } else { // и двата (рядко) – приемаме left/right като граници
+    x = left;               w = right - left;
   }
 
   if (moving.top && !moving.bottom) {
-    y = top; h = start.bottom - top;
+    y = top;                h = start.bottom - top;
   } else if (moving.bottom && !moving.top) {
-    y = start.y; h = bottom - start.y;
+    y = start.y;            h = bottom - start.y;
   } else {
-    y = top; h = bottom - top;
+    y = top;                h = bottom - top;
   }
+
+  // 4) Минимални размери и леко закръгляне за стабилен UI
+  w = Math.max(40, w);
+  h = Math.max(40, h);
+  // по желание: закръгляй до цели пиксели, но не е задължително
+  x = Math.round(x); y = Math.round(y);
+  w = Math.round(w); h = Math.round(h);
 
   return { x, y, w, h };
 }
+
