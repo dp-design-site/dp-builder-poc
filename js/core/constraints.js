@@ -65,8 +65,8 @@ function injectHandleStyles(){
     body.constraints-mode .widget *, body.constraints-mode .widget::before, body.constraints-mode .widget::after{ pointer-events:none; }
     body.constraints-mode .widget .c-handle{ pointer-events:auto !important; }
 
-    .c-handle{position:absolute; z-index:999; background:#49c0ff; opacity:.2; border-radius:50%; box-shadow:0 0 0 1px rgba(0,0,0,.25); width:8px; height:8px; transform: translate(-50%, -50%);}
-    .c-handle.small-dot{width:4px;height:4px}
+    .c-handle{position:absolute; z-index:999; background:#49c0ff; opacity:.7; border-radius:50%; box-shadow:0 0 0 1px rgba(0,0,0,.25); width:16px; height:16px; transform: translate(-50%, -50%);}
+    .c-handle.small-dot{width:8px;height:8px}
     .c-handle.hover{opacity:1; transform: translate(-50%, -50%) scale(1.15);}    
     .c-handle.pick{background:#ffd257; opacity:1;}
   `;
@@ -80,7 +80,8 @@ function anchorsForMode(mode){
 }
 
 function addHandlesTo(el){
-  removeHandlesFrom(el);
+  // ако вече има хендъли (напр. върху firstPick), не ги подменяй — пазим маркировката
+  if (el.querySelector('.c-handle')) return;
   const r = getRect(el);
   const anchors = anchorsForMode(state.mode);
   const map = {
@@ -96,7 +97,6 @@ function addHandlesTo(el){
     const h = document.createElement('div');
     h.className = 'c-handle';
     h.dataset.anchor = name;
-    // вътрешни координати
     h.style.left = (d.x - r.left) + 'px';
     h.style.top  = (d.y - r.top) + 'px';
     h.title = name;
@@ -109,13 +109,15 @@ function addHandlesTo(el){
 
 function removeHandlesFrom(el){ el?.querySelectorAll('.c-handle').forEach(n=>n.remove()); }
 
+function removeAllHandles(){ document.querySelectorAll('.c-handle').forEach(n=>n.remove()); }(el){ el?.querySelectorAll('.c-handle').forEach(n=>n.remove()); }
+
 function setHoverEl(el){
   if (state.hoverEl === el) return;
-  // пазим хендълите на firstPick елемент, за да не изчезват
   const keep = state.firstPick?.el;
-  document.querySelectorAll('.widget').forEach(w=>{ if (w!==keep) removeHandlesFrom(w); });
+  // премахни от всички освен избрания firstPick и новия hover
+  document.querySelectorAll('.widget').forEach(w=>{ if (w!==keep && w!==el) removeHandlesFrom(w); });
   state.hoverEl = el;
-  if (el) addHandlesTo(el);
+  if (el && el !== keep) addHandlesTo(el); // върху firstPick не презареждаме, за да не губим 'pick'
 }
 
 // ---- Pick anchors with click→click ----
@@ -172,22 +174,21 @@ function setMode(mode){
   if (state.mode === mode) return;
   hideCursorLine();
   document.removeEventListener('mousemove', updateCursorLine);
-  resetPick();
+  document.removeEventListener('mousemove', handleHoverMove);
   state.mode = mode;
   document.body.classList.toggle('constraints-mode', mode !== 'none');
 
-  if (mode !== 'none'){
+  if (mode === 'none'){
+    // пълно почистване при излизане
+    resetPick();
+    removeAllHandles();
+  } else {
     injectHandleStyles();
     document.addEventListener('mousemove', updateCursorLine);
-  }
-  // започни да следиш hover за показване на хендъли само върху близкия елемент
-  if (mode !== 'none') {
     document.addEventListener('mousemove', handleHoverMove, { passive: true });
-  } else {
-    document.removeEventListener('mousemove', handleHoverMove);
-    setHoverEl(null);
   }
   window.dispatchEvent(new CustomEvent('constraints:mode', { detail: { mode } }));
+}(new CustomEvent('constraints:mode', { detail: { mode } }));
 }
 function getMode(){ return state.mode; }
 
