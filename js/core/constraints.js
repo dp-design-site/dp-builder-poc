@@ -1,5 +1,5 @@
-// js/core/constraints.js — Click→Click (без въпроси), с визуални хендъли за ръб/център; показваме само върху hover елемента и върху първия избран
-import { createConstraint, deleteConstraint, getConstraintsForElement, applyConstraintsFor } from './constraints-engine.js';
+// js/core/constraints.js — v2: Click→Click, показваме само върху hover + индикатори за използвани точки и контекстно меню Edit/Delete
+import { createConstraint, deleteConstraint, getConstraintsForElement, applyConstraintsFor, getUsedAnchors, applyAround } from './constraints-engine.js';
 
 const state = {
   mode: 'none',            // 'none' | 'alignV' | 'alignH'
@@ -12,198 +12,131 @@ const OK_X = ['left','centerX','right'];
 const OK_Y = ['top','centerY','bottom'];
 
 // ---- Utils ----
-function getXY(el){
-  return {
-    x: parseFloat(el.getAttribute('data-x')) || 0,
-    y: parseFloat(el.getAttribute('data-y')) || 0,
-  };
-}
-function getRect(el){
-  const {x,y} = getXY(el);
-  const w = el.getBoundingClientRect().width;
-  const h = el.getBoundingClientRect().height;
-  return { left:x, right:x+w, top:y, bottom:y+h, centerX:x+w/2, centerY:y+h/2, w, h };
-}
+function getXY(el){ return { x: parseFloat(el.getAttribute('data-x'))||0, y: parseFloat(el.getAttribute('data-y'))||0 }; }
+function getRect(el){ const {x,y}=getXY(el); const w=el.getBoundingClientRect().width; const h=el.getBoundingClientRect().height; return { left:x,right:x+w,top:y,bottom:y+h,centerX:x+w/2,centerY:y+h/2,w,h }; }
 
-// ---- Cursor helper line (допълнение към системния курсор) ----
-function ensureCursorLine(){
-  if (state.cursorLine) return state.cursorLine;
-  const d = document.createElement('div');
-  d.id = 'constraints-cursor-line';
-  d.style.position = 'fixed';
-  d.style.pointerEvents = 'none';
-  d.style.zIndex = 10001;
-  d.style.opacity = 0.9;
-  document.body.appendChild(d);
-  state.cursorLine = d; return d;
-}
-function updateCursorLine(e){
-  if (state.mode === 'alignV'){
-    const el = ensureCursorLine();
-    el.style.width = '1px'; el.style.height = '100vh'; el.style.background = '#49c0ff';
-    el.style.left = e.clientX + 'px'; el.style.top = 0;
-  } else if (state.mode === 'alignH'){
-    const el = ensureCursorLine();
-    el.style.height = '1px'; el.style.width = '100vw'; el.style.background = '#49c0ff';
-    el.style.top = e.clientY + 'px'; el.style.left = 0;
-  } else { hideCursorLine(); }
-}
-function hideCursorLine(){ if (state.cursorLine){ state.cursorLine.remove(); state.cursorLine=null; } }
+// ---- Cursor helper line ----
+function ensureCursorLine(){ if (state.cursorLine) return state.cursorLine; const d=document.createElement('div'); d.id='constraints-cursor-line'; d.style.position='fixed'; d.style.pointerEvents='none'; d.style.zIndex=10001; d.style.opacity=0.9; document.body.appendChild(d); state.cursorLine=d; return d; }
+function updateCursorLine(e){ if(state.mode==='alignV'){const el=ensureCursorLine(); el.style.width='1px'; el.style.height='100vh'; el.style.background='#49c0ff'; el.style.left=e.clientX+'px'; el.style.top=0;} else if(state.mode==='alignH'){const el=ensureCursorLine(); el.style.height='1px'; el.style.width='100vw'; el.style.background='#49c0ff'; el.style.top=e.clientY+'px'; el.style.left=0;} else {hideCursorLine();} }
+function hideCursorLine(){ if(state.cursorLine){ state.cursorLine.remove(); state.cursorLine=null; } }
 
-// ---- Handle styles + hit area ----
-function injectHandleStyles(){
-  if (document.getElementById('constraint-handle-style')) return;
-  const s = document.createElement('style');
-  s.id = 'constraint-handle-style';
-  s.textContent = `
-    body.constraints-mode .widget{ cursor: crosshair !important; }
-    body.constraints-mode .widget *, body.constraints-mode .widget::before, body.constraints-mode .widget::after{ pointer-events:none; }
-    body.constraints-mode .widget .c-handle{ pointer-events:auto !important; }
+// ---- Styles + hit area ----
+function injectHandleStyles(){ if(document.getElementById('constraint-handle-style')) return; const s=document.createElement('style'); s.id='constraint-handle-style'; s.textContent=`
+  body.constraints-mode .widget{ cursor: crosshair !important; }
+  body.constraints-mode .widget *, body.constraints-mode .widget::before, body.constraints-mode .widget::after{ pointer-events:none; }
+  body.constraints-mode .widget .c-handle{ pointer-events:auto !important; }
+  .c-handle{position:absolute; z-index:999; background:#49c0ff; opacity:.65; border-radius:50%; box-shadow:0 0 0 1px rgba(0,0,0,.25); width:16px; height:16px; transform: translate(-50%, -50%);}  
+  .c-handle.used{ background:#ffd257; opacity:1; }
+  .c-handle.hover{ opacity:1; transform: translate(-50%, -50%) scale(1.15); }
+  .c-handle.pick{ outline: 2px solid #ffe08a; }
+  .c-handle.context{ outline: 2px solid #7ad3ff; }
+  .c-ctx{ position:fixed; z-index:10002; background:#1f2536; border:1px solid #2e3650; color:#cfe8ff; border-radius:8px; overflow:hidden; }
+  .c-ctx button{ display:block; width:100%; text-align:left; padding:8px 10px; background:#232a3a; border:none; color:#cfe8ff; }
+  .c-ctx button:hover{ background:#2b3450; }
+`; document.head.appendChild(s);} 
 
-    .c-handle{position:absolute; z-index:999; background:#49c0ff; opacity:.7; border-radius:50%; box-shadow:0 0 0 1px rgba(0,0,0,.25); width:16px; height:16px; transform: translate(-50%, -50%);}
-    .c-handle.small-dot{width:8px;height:8px}
-    .c-handle.hover{opacity:1; transform: translate(-50%, -50%) scale(1.15);}    
-    .c-handle.pick{background:#ffd257; opacity:1;}
-  `;
-  document.head.appendChild(s);
-}
+function anchorsForMode(mode){ if(mode==='alignV') return OK_X; if(mode==='alignH') return OK_Y; return [...OK_X, ...OK_Y]; }
 
-function anchorsForMode(mode){
-  if (mode==='alignV') return OK_X;
-  if (mode==='alignH') return OK_Y;
-  return [...OK_X, ...OK_Y];
-}
+function handlePosMap(r){ return {
+  left:     { x:r.left,    y:r.centerY }, right:{ x:r.right, y:r.centerY },
+  top:      { x:r.centerX, y:r.top },     bottom:{ x:r.centerX, y:r.bottom },
+  centerX:  { x:r.centerX, y:r.centerY }, centerY:{ x:r.centerX, y:r.centerY }
+}; }
 
 function addHandlesTo(el){
-  // ако вече има хендъли (напр. върху firstPick), не ги подменяме — пазим маркировката
   if (el.querySelector('.c-handle')) return;
-  const r = getRect(el);
-  const anchors = anchorsForMode(state.mode);
-  const map = {
-    left:     { x: r.left,      y: r.centerY },
-    right:    { x: r.right,     y: r.centerY },
-    top:      { x: r.centerX,   y: r.top },
-    bottom:   { x: r.centerX,   y: r.bottom },
-    centerX:  { x: r.centerX,   y: r.centerY },
-    centerY:  { x: r.centerX,   y: r.centerY },
-  };
+  const r = getRect(el); const anchors = anchorsForMode(state.mode); const used = getUsedAnchors(el.id);
+  const map = handlePosMap(r);
   anchors.forEach(name=>{
-    const d = map[name]; if(!d) return;
-    const h = document.createElement('div');
-    h.className = 'c-handle';
-    h.dataset.anchor = name;
-    // вътрешни координати
-    h.style.left = (d.x - r.left) + 'px';
-    h.style.top  = (d.y - r.top) + 'px';
-    h.title = name;
-    h.addEventListener('mouseenter', ()=> h.classList.add('hover'));
-    h.addEventListener('mouseleave', ()=> h.classList.remove('hover'));
-    h.addEventListener('pointerdown', (e)=>{ e.stopPropagation(); e.preventDefault(); pickAnchor(el, name, h); });
+    const d = map[name]; if(!d) return; const h=document.createElement('div'); h.className='c-handle'; h.dataset.anchor=name;
+    h.style.left=(d.x - r.left)+'px'; h.style.top=(d.y - r.top)+'px'; h.title=name;
+    if (used.has(name)) h.classList.add('used');
+    h.addEventListener('mouseenter', ()=>{ h.classList.add('hover'); if(used.has(name)) highlightCounterpart(el.id, name, true); });
+    h.addEventListener('mouseleave', ()=>{ h.classList.remove('hover'); if(used.has(name)) highlightCounterpart(el.id, name, false); });
+    h.addEventListener('pointerdown', (e)=>{ e.stopPropagation(); e.preventDefault(); if (e.button===2){ openCtxMenu(e.clientX,e.clientY, el, name, h); return;} pickAnchor(el, name, h); });
     el.appendChild(h);
   });
 }
 
 function removeHandlesFrom(el){ if(!el) return; el.querySelectorAll('.c-handle').forEach(n=>n.remove()); }
-function removeAllHandles(){ document.querySelectorAll('.c-handle').forEach(n=>n.remove()); }
+function removeAllHandles(){ document.querySelectorAll('.c-handle').forEach(n=>n.remove()); closeCtxMenu(); }
 
 function setHoverEl(el){
-  if (state.hoverEl === el) return;
-  const keep = state.firstPick?.el;
-  // премахни от всички освен избрания firstPick и новия hover
+  if (state.hoverEl === el) return; const keep = state.firstPick?.el;
   document.querySelectorAll('.widget').forEach(w=>{ if (w!==keep && w!==el) removeHandlesFrom(w); });
-  state.hoverEl = el;
-  if (el && el !== keep) addHandlesTo(el); // върху firstPick не презареждаме, за да не губим 'pick'
+  state.hoverEl = el; if (el && el !== keep) addHandlesTo(el);
 }
 
-// ---- Pick anchors with click→click ----
+// ---- Counterpart highlight ----
+function highlightCounterpart(elId, anchor, on){
+  const list = getUsedAnchors(elId).get(anchor) || [];
+  for (const item of list){
+    const other = document.getElementById(item.otherElId); if (!other) continue;
+    // подсигури хендъли върху другия
+    if (!other.querySelector('.c-handle')) addHandlesTo(other);
+    other.querySelectorAll(`.c-handle[data-anchor="${item.otherAnchor}"]`).forEach(h=>{
+      h.classList.toggle('context', !!on);
+    });
+  }
+}
+
+// ---- Click→Click ----
 function pickAnchor(el, anchor, handleEl){
   document.querySelectorAll('.c-handle.pick').forEach(n=>n.classList.remove('pick'));
   handleEl?.classList.add('pick');
   if (!state.firstPick){ state.firstPick = { el, anchor }; return; }
-
-  // Втора селекция → създаваме констрайнт
-  const a = state.firstPick;         // първи клик (ще го местим)
-  const b = { el, anchor };          // втори клик (референт)
-
-  // В режим alignV/alignH приемаме само релевантни анкери
+  const a = state.firstPick; const b = { el, anchor };
   if (state.mode==='alignV' && !(OK_X.includes(a.anchor) && OK_X.includes(b.anchor))) { resetPick(); return; }
   if (state.mode==='alignH' && !(OK_Y.includes(a.anchor) && OK_Y.includes(b.anchor))) { resetPick(); return; }
-
-  // Swap: местим ПЪРВИЯ към ВТОРИЯ → вторият е референт (A), първият е зависим (B)
+  // Move first → second (second is reference)
   createConstraint(b.el, b.anchor, a.el, a.anchor);
-  applyConstraintsFor(b.el.id);
-
+  applyAround(b.el.id);
   resetPick();
 }
 
-function resetPick(){
-  state.firstPick = null;
-  document.querySelectorAll('.c-handle.pick').forEach(n=>n.classList.remove('pick'));
+function resetPick(){ state.firstPick = null; document.querySelectorAll('.c-handle.pick').forEach(n=>n.classList.remove('pick')); closeCtxMenu(); }
+
+// ---- Indicators replaced with used-handle glow (done via .used class) ----
+// оставяме renderIndicators само ако трябва да се показват баджове по-късно
+function renderIndicators(){ /* no-op (заменено от .used) */ }
+
+function observeSelectionChanges(){ /* можем да добавим логика за авто show/hide при селекция */ }
+
+// ---- Context menu (Edit/Delete) ----
+let ctxEl = null;
+function openCtxMenu(x,y, el, anchor, handleEl){ closeCtxMenu(); const box=document.createElement('div'); box.className='c-ctx'; box.style.left=x+'px'; box.style.top=y+'px';
+  const usedList = getUsedAnchors(el.id).get(anchor)||[];
+  // При повече от една връзка към същия anchor — показваме по една команда на ред
+  usedList.forEach(item=>{
+    const btnE=document.createElement('button'); btnE.textContent=`Edit (${anchor}↔${item.otherAnchor})`; btnE.onclick=()=>{ closeCtxMenu(); // Edit = rebind: махаме старата и чакаме нова точка
+      deleteConstraint(item.id); // временно откачане
+      // маркирай текущата като firstPick, за да се избере нова втора
+      state.firstPick = { el, anchor };
+      handleEl.classList.add('pick');
+    }; box.appendChild(btnE);
+
+    const btnD=document.createElement('button'); btnD.textContent=`Delete (${anchor}↔${item.otherAnchor})`; btnD.onclick=()=>{ deleteConstraint(item.id); closeCtxMenu(); refreshHover(); }; box.appendChild(btnD);
+  });
+  if (!usedList.length){ const i=document.createElement('button'); i.textContent='No constraint here'; i.disabled=true; box.appendChild(i); }
+  document.body.appendChild(box); ctxEl=box;
 }
-
-// ---- Indicators over selected element ----
-function renderIndicators(){
-  document.querySelectorAll('.constraint-badge').forEach(n=>n.remove());
-  const selected = document.querySelector('.widget.selected');
-  if (!selected) return;
-  const list = getConstraintsForElement(selected.id);
-  let i=0;
-  for (const c of list){
-    const badge = document.createElement('div');
-    badge.className = 'constraint-badge';
-    badge.style.position='absolute'; badge.style.zIndex=1000;
-    badge.style.background='#1e263b'; badge.style.border='1px solid #2f3a5a'; badge.style.color='#cfe8ff';
-    badge.style.fontSize='11px'; badge.style.padding='2px 6px'; badge.style.borderRadius='6px';
-    badge.style.top = '-22px'; badge.style.left = (4 + i*80) + 'px';
-    badge.textContent = `${c.b.anchor} = ${c.a.anchor}`;
-
-    const del = document.createElement('span'); del.textContent=' ✕'; del.style.cursor='pointer'; del.style.marginLeft='6px'; del.style.opacity='.8';
-    del.addEventListener('pointerdown', (e)=>{ e.stopPropagation(); e.preventDefault(); deleteConstraint(c.id); renderIndicators(); });
-    badge.appendChild(del);
-
-    selected.appendChild(badge); i++;
-  }
-}
-
-function observeSelectionChanges(){
-  const canvas = document.getElementById('canvas');
-  if (!canvas) return;
-  const obs = new MutationObserver(() => renderIndicators());
-  obs.observe(canvas, { subtree:true, attributes:true, attributeFilter:['class','style'] });
-}
+function closeCtxMenu(){ if(ctxEl){ ctxEl.remove(); ctxEl=null; } }
+function refreshHover(){ setHoverEl(state.hoverEl); }
 
 // ---- Mode handling ----
 export function setMode(mode){
   if (state.mode === mode) return;
-  hideCursorLine();
-  document.removeEventListener('mousemove', updateCursorLine);
-  document.removeEventListener('mousemove', handleHoverMove);
-  state.mode = mode;
-  document.body.classList.toggle('constraints-mode', mode !== 'none');
-
-  if (mode === 'none'){
-    resetPick();
-    removeAllHandles();
-  } else {
-    injectHandleStyles();
-    document.addEventListener('mousemove', updateCursorLine);
-    document.addEventListener('mousemove', handleHoverMove, { passive: true });
-  }
+  hideCursorLine(); document.removeEventListener('mousemove', updateCursorLine); document.removeEventListener('mousemove', handleHoverMove);
+  state.mode = mode; document.body.classList.toggle('constraints-mode', mode !== 'none');
+  if (mode === 'none'){ resetPick(); removeAllHandles(); }
+  else { injectHandleStyles(); document.addEventListener('mousemove', updateCursorLine); document.addEventListener('mousemove', handleHoverMove, { passive:true }); }
   window.dispatchEvent(new CustomEvent('constraints:mode', { detail: { mode } }));
 }
 export function getMode(){ return state.mode; }
 
-function handleHoverMove(e){
-  const el = document.elementFromPoint(e.clientX, e.clientY)?.closest('.widget');
-  if (!el) { setHoverEl(null); return; }
-  setHoverEl(el);
-}
+function handleHoverMove(e){ const el = document.elementFromPoint(e.clientX, e.clientY)?.closest('.widget'); if (!el) { setHoverEl(null); return; } setHoverEl(el); }
 
-export function initConstraints(){
-  document.addEventListener('keydown', (e)=>{ if (e.key==='Escape') { setMode('none'); } });
-  observeSelectionChanges();
-  renderIndicators();
-}
+export function initConstraints(){ document.addEventListener('keydown', (e)=>{ if (e.key==='Escape') { setMode('none'); } }); }
 
-// Expose глобално за рибона
-window.Constraints = { init: initConstraints, setMode, getMode, getConstraintsForElement };
+// Expose глобално
+window.Constraints = { init: initConstraints, setMode, getMode, getConstraintsForElement, applyAround };
