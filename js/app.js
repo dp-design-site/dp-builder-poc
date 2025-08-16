@@ -92,7 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initSelection();
 
   // Ribbon mount
-  loadComponent('body', 'components/ribbon.html').then(() => {
+   loadComponent('#ribbon-mount', 'components/ribbon.html').then(() => {
     window.Constraints?.init();
   });
 
