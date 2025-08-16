@@ -140,73 +140,69 @@ document.addEventListener('DOMContentLoaded', () => {
   interact('.widget').resizable({
     edges: { left: true, right: true, top: true, bottom: true },
     listeners: {
-      start (event) {
-        const t = event.target;
-        event.interaction._resizeStart = {
-          x: parseFloat(t.getAttribute('data-x')) || 0,
-          y: parseFloat(t.getAttribute('data-y')) || 0,
-          w: t.offsetWidth,
-          h: t.offsetHeight,
-        };
-      },
       move (event) {
-        const start = event.interaction._resizeStart || { x:0, y:0, w: event.target.offsetWidth, h: event.target.offsetHeight };
+        let x = parseFloat(event.target.getAttribute('data-x')) || 0;
+        let y = parseFloat(event.target.getAttribute('data-y')) || 0;
+        event.target.style.width  = event.rect.width + 'px';
+        event.target.style.height = event.rect.height + 'px';
+        x += event.deltaRect.left; y += event.deltaRect.top;
 
-        // 1) Предложени нови стойности, изчислени спрямо стартовия правоъгълник (без да пишем в DOM предварително)
-        let x = start.x + event.deltaRect.left;
-        let y = start.y + event.deltaRect.top;
-        let w = start.w + event.deltaRect.width;
-        let h = start.h + event.deltaRect.height;
-
-        // 2) Подготвяме структура за snap проверки
+        const w = event.rect.width; const h = event.rect.height;
         const tr = { left:x, right:x+w, top:y, bottom:y+h, centerX:x+w/2, centerY:y+h/2 };
         let snappedX = x, snappedY = y; let snappedW = w, snappedH = h;
         let vGuide = null, hGuide = null; let vGuidePos = null, hGuidePos = null;
 
-        // 3) Snap само ако е разрешен и не е задържан Shift
         if (SNAP_ENABLED && !event.shiftKey) {
           for (const other of allWidgets(event.target)) {
             const or = getRect(other);
-            // Вертикален snap (ляв/десен/център)
             if (SNAP_EDGES) {
-              // Ляв ръб
-              if (Math.abs(tr.left - or.left) < SNAP_TOL)  { snappedX = or.left;  snappedW = tr.right - or.left; vGuide = true; vGuidePos = or.left; }
-              if (Math.abs(tr.left - or.right) < SNAP_TOL) { snappedX = or.right; snappedW = tr.right - or.right; vGuide = true; vGuidePos = or.right; }
-              // Десен ръб
-              if (Math.abs(tr.right - or.left) < SNAP_TOL) { snappedW = or.left - tr.left;  vGuide = true; vGuidePos = or.left; }
-              if (Math.abs(tr.right - or.right) < SNAP_TOL){ snappedW = or.right - tr.left; vGuide = true; vGuidePos = or.right; }
-            }
-            if (SNAP_CENTERS) {
-              // Център по X
-              if (Math.abs(tr.centerX - or.centerX) < SNAP_TOL) {
-                const newX = or.centerX - (tr.right - tr.left)/2;
-                snappedX = newX; snappedW = tr.right - tr.left; vGuide = true; vGuidePos = or.centerX;
+              for (const [txName, tx] of [['left', tr.left], ['right', tr.right]]) {
+                for (const ox of [or.left, or.right]) {
+                  if (Math.abs(tx - ox) < SNAP_TOL) {
+                    if (txName === 'left')   { snappedX = ox; snappedW = tr.right - ox; vGuide = true; vGuidePos = ox; }
+                    if (txName === 'right')  { snappedW = ox - tr.left; vGuide = true; vGuidePos = ox; }
+                  }
+                }
               }
             }
-            // Хоризонтален snap (горен/долен/център)
+            if (SNAP_CENTERS) {
+              for (const [txName, tx] of [['centerX', tr.centerX]]) {
+                for (const ox of [or.centerX]) {
+                  if (Math.abs(tx - ox) < SNAP_TOL) {
+                    const newX = ox - (tr.right - tr.left)/2;
+                    snappedX = newX; snappedW = tr.right - tr.left; vGuide = true; vGuidePos = ox;
+                  }
+                }
+              }
+            }
             if (SNAP_EDGES) {
-              if (Math.abs(tr.top - or.top) < SNAP_TOL)    { snappedY = or.top;    snappedH = tr.bottom - or.top;    hGuide = true; hGuidePos = or.top; }
-              if (Math.abs(tr.top - or.bottom) < SNAP_TOL) { snappedY = or.bottom; snappedH = tr.bottom - or.bottom; hGuide = true; hGuidePos = or.bottom; }
-              if (Math.abs(tr.bottom - or.top) < SNAP_TOL) { snappedH = or.top - tr.top;    hGuide = true; hGuidePos = or.top; }
-              if (Math.abs(tr.bottom - or.bottom) < SNAP_TOL){ snappedH = or.bottom - tr.top; hGuide = true; hGuidePos = or.bottom; }
+              for (const [tyName, ty] of [['top', tr.top], ['bottom', tr.bottom]]) {
+                for (const oy of [or.top, or.bottom]) {
+                  if (Math.abs(ty - oy) < SNAP_TOL) {
+                    if (tyName === 'top')    { snappedY = oy; snappedH = tr.bottom - oy; hGuide = true; hGuidePos = oy; }
+                    if (tyName === 'bottom') { snappedH = oy - tr.top; hGuide = true; hGuidePos = oy; }
+                  }
+                }
+              }
             }
             if (SNAP_CENTERS) {
-              if (Math.abs(tr.centerY - or.centerY) < SNAP_TOL) {
-                const newY = or.centerY - (tr.bottom - tr.top)/2;
-                snappedY = newY; snappedH = tr.bottom - tr.top; hGuide = true; hGuidePos = or.centerY;
+              for (const [tyName, ty] of [['centerY', tr.centerY]]) {
+                for (const oy of [or.centerY]) {
+                  if (Math.abs(ty - oy) < SNAP_TOL) {
+                    const newY = oy - (tr.bottom - tr.top)/2;
+                    snappedY = newY; snappedH = tr.bottom - tr.top; hGuide = true; hGuidePos = oy;
+                  }
+                }
               }
             }
           }
         }
 
-        // 4) Ограничения и писане в DOM (еднократно)
-        snappedW = Math.max(40, snappedW);
-        snappedH = Math.max(40, snappedH);
         event.target.style.transform = `translate(${snappedX}px, ${snappedY}px)`;
         event.target.setAttribute('data-x', snappedX);
         event.target.setAttribute('data-y', snappedY);
-        event.target.style.width  = snappedW + 'px';
-        event.target.style.height = snappedH + 'px';
+        event.target.style.width  = Math.max(40, snappedW) + 'px';
+        event.target.style.height = Math.max(40, snappedH) + 'px';
 
         if (vGuide && vGuidePos !== null) showGuideLocal('v', vGuidePos); else { const gv=document.getElementById('guide-v'); if (gv) gv.style.display='none'; }
         if (hGuide && hGuidePos !== null) showGuideLocal('h', hGuidePos); else { const gh=document.getElementById('guide-h'); if (gh) gh.style.display='none'; }
