@@ -1,3 +1,5 @@
+import './core/component-loader.js'; // ще дефинира window.loadComponent
+
 let SNAP_TOL = 3;
 let SNAP_ENABLED = true;
 let SNAP_EDGES = true;
