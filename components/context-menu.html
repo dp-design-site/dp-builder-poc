@@ -1,121 +1,113 @@
-<!-- context-menu.html -->
-<div id="context-menu" class="context-menu"></div>
+<!-- components/context-menu.html -->
+<div id="dp-context-root" class="dp-context-menu hidden" role="menu" aria-hidden="true"></div>
+
 <style>
-.context-menu {
-  position: fixed;
-  min-width: 180px;
-  background: #23293a;
-  color: #fff;
-  border: 1.5px solid #2a3244;
-  box-shadow: 0 6px 32px #0008, 0 1.5px 6px #23293a22;
-  border-radius: 10px;
-  z-index: 99999;
-  font-family: inherit;
-  font-size: 16px;
-  padding: 6px 0;
-  user-select: none;
-  display: none;
-}
-.context-menu__item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 7px 18px 7px 16px;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 0.14s;
-  min-height: 28px;
-}
-.context-menu__item:hover {
-  background: #304058;
-}
-.context-menu__item.shortcut {
-  opacity: 0.85;
-  font-size: 15px;
-  font-family: "Consolas", monospace;
-  letter-spacing: 0.5px;
-  margin-left: 24px;
-}
-.context-menu__separator {
-  height: 1px;
-  background: #2a3244;
-  margin: 5px 0 5px 0;
-  border: none;
-}
-.context-menu__item.disabled {
-  color: #888a;
-  pointer-events: none;
-  background: none;
-}
-.context-menu__icon {
-  width: 1.2em;
-  height: 1.2em;
-  margin-right: 8px;
-  opacity: 0.85;
-}
+  .dp-context-menu {
+    position: fixed; /* fixed: следва курсора, не се реже от overflow на canvas */
+    min-width: 200px;
+    max-width: 320px;
+    background: #1f1f1f;
+    color: #eaeaea;
+    border: 1px solid #2a2a2a;
+    border-radius: 8px;
+    padding: 6px;
+    box-shadow: 0 12px 24px rgba(0,0,0,0.35);
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    z-index: 99999;
+    user-select: none;
+  }
+  .dp-context-menu.hidden { display: none; }
+
+  .dp-context-menu ul {
+    list-style: none;
+    margin: 0;
+    padding: 4px;
+  }
+  .dp-context-item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 16px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    cursor: default;
+    white-space: nowrap;
+  }
+  .dp-context-item:hover { background: #2a2a2a; }
+  .dp-context-item.disabled { opacity: 0.5; pointer-events: none; }
+
+  .dp-context-sep { border-top: 1px solid #323232; margin: 6px 6px; }
+  .dp-context-label { pointer-events: none; display:flex; align-items:center; gap:8px; }
+  .dp-context-icon { width: 1.2em; height: 1.2em; opacity: .85; display:inline-block; }
+  .dp-context-shortcut { opacity: 0.75; font-size: 12px; font-family: Consolas, monospace; letter-spacing: .4px; }
+
+  /* submenu caret */
+  .dp-context-item.has-submenu { position: relative; padding-right: 26px; }
+  .dp-context-item.has-submenu::after { content: "›"; position: absolute; right: 10px; opacity:.7; }
+  .dp-submenu { position: absolute; top: 0; left: 100%; margin-left: 6px; }
 </style>
+
 <script>
-const menuContainer = document.getElementById('context-menu');
-let menuHideHandler = null;
+(function () {
+  const root = document.getElementById('dp-context-root');
+  const state = { isOpen:false, keyboardMap:new Map(), activeMenus:[], lastItems:[] };
 
-function showContextMenu(x, y, items) {
-  menuContainer.innerHTML = '';
-  for (const item of items) {
-    if (item === 'separator') {
-      const sep = document.createElement('div');
-      sep.className = 'context-menu__separator';
-      menuContainer.appendChild(sep);
-      continue;
-    }
-    const el = document.createElement('div');
-    el.className = 'context-menu__item' + (item.disabled ? ' disabled' : '');
-    el.innerHTML =
-      (item.icon ? `<span class="context-menu__icon">${item.icon}</span>` : '') +
-      `<span>${item.label}</span>` +
-      (item.shortcut ? `<span class="context-menu__item shortcut">${item.shortcut}</span>` : '');
-    if (item.action && !item.disabled) {
-      el.addEventListener('click', e => {
-        item.action();
-        hideContextMenu();
-        e.stopPropagation();
-      });
-    }
-    menuContainer.appendChild(el);
+  function normalizeShortcut(s){ return (s||"")
+    .replace(/\s+/g,"")
+    .replace(/Control/ig,"Ctrl")
+    .replace(/Command/ig,"Cmd")
+    .replace(/AltGraph/ig,"AltGr"); }
+
+  function parseKeyEvent(e){
+    const parts=[];
+    if(e.ctrlKey||e.metaKey) parts.push('Ctrl');
+    if(e.shiftKey) parts.push('Shift');
+    if(e.altKey) parts.push('Alt');
+    const map={ 'Delete':'Del',' ':'Space' };
+    const key=e.key.length===1? e.key.toUpperCase() : (map[e.key]||e.key);
+    parts.push(key);
+    return parts.join('+');
   }
-  menuContainer.style.display = 'block';
-  let mx = x, my = y;
-  setTimeout(() => {
-    const rect = menuContainer.getBoundingClientRect();
-    if (mx + rect.width > window.innerWidth) mx = window.innerWidth - rect.width - 8;
-    if (my + rect.height > window.innerHeight) my = window.innerHeight - rect.height - 8;
-    menuContainer.style.left = mx + 'px';
-    menuContainer.style.top = my + 'px';
-  }, 0);
 
-  // Hide on click elsewhere or Escape
-  if (menuHideHandler) {
-    document.removeEventListener('mousedown', menuHideHandler);
-    document.removeEventListener('keydown', menuHideHandler);
+  function clearRoot(){ root.innerHTML=''; state.activeMenus=[]; }
+  function hideContextMenu(){ if(!state.isOpen) return; root.classList.add('hidden'); root.setAttribute('aria-hidden','true'); root.style.left='-9999px'; root.style.top='-9999px'; state.isOpen=false; state.keyboardMap.clear(); clearRoot(); removeGlobals(); }
+
+  function onDocDown(e){ if(!root.contains(e.target)) hideContextMenu(); }
+  function onKey(e){ if(!state.isOpen) return; if(e.key==='Escape'){ e.preventDefault(); hideContextMenu(); return; } const combo=parseKeyEvent(e); const fn=state.keyboardMap.get(normalizeShortcut(combo)); if(fn){ e.preventDefault(); try{fn();}catch{} hideContextMenu(); } }
+  function onScroll(){ hideContextMenu(); }
+  function addGlobals(){ document.addEventListener('mousedown',onDocDown, {capture:true}); document.addEventListener('contextmenu',onDocDown, {capture:true}); document.addEventListener('keydown',onKey); window.addEventListener('scroll',onScroll,true); window.addEventListener('resize',onScroll,true); }
+  function removeGlobals(){ document.removeEventListener('mousedown',onDocDown, {capture:true}); document.removeEventListener('contextmenu',onDocDown, {capture:true}); document.removeEventListener('keydown',onKey); window.removeEventListener('scroll',onScroll,true); window.removeEventListener('resize',onScroll,true); }
+
+  function buildMenu(items, parent){
+    const ul=document.createElement('ul'); parent.appendChild(ul);
+    items.forEach(item=>{
+      if(item==='separator' || item?.type==='separator'){ const sep=document.createElement('div'); sep.className='dp-context-sep'; ul.appendChild(sep); return; }
+      const li=document.createElement('li'); li.className='dp-context-item' + (item.disabled?' disabled':'');
+      const label=document.createElement('div'); label.className='dp-context-label';
+      if(item.icon){ const i=document.createElement('span'); i.className='dp-context-icon'; i.innerHTML=item.icon; label.appendChild(i); }
+      const text=document.createElement('span'); text.textContent=item.label||''; label.appendChild(text);
+      const shortcut=document.createElement('div'); shortcut.className='dp-context-shortcut'; shortcut.textContent=item.shortcut||'';
+      li.appendChild(label); li.appendChild(shortcut); ul.appendChild(li);
+
+      if(item.shortcut && typeof item.action==='function' && !item.disabled){ state.keyboardMap.set(normalizeShortcut(item.shortcut), item.action); }
+      if(!item.disabled && typeof item.action==='function' && !item.submenu){ li.addEventListener('click', (e)=>{ e.stopPropagation(); try{item.action();}catch{} hideContextMenu(); }); }
+
+      if(Array.isArray(item.submenu) && item.submenu.length){
+        li.classList.add('has-submenu');
+        const panel=document.createElement('div'); panel.className='dp-context-menu dp-submenu hidden'; li.appendChild(panel);
+        li.addEventListener('mouseenter',()=>{ const myIndex=state.activeMenus.indexOf(panel); if(myIndex>=0){ state.activeMenus.slice(myIndex+1).forEach(p=>p.classList.add('hidden')); state.activeMenus=state.activeMenus.slice(0,myIndex+1);} panel.classList.remove('hidden'); positionSubmenu(li,panel); });
+        li.addEventListener('mouseleave',()=> panel.classList.add('hidden'));
+        buildMenu(item.submenu, panel); state.activeMenus.push(panel);
+      }
+    });
   }
-  menuHideHandler = function(e) {
-    if (e.type === 'keydown' && e.key !== 'Escape') return;
-    hideContextMenu();
-  };
-  document.addEventListener('mousedown', menuHideHandler);
-  document.addEventListener('keydown', menuHideHandler);
-}
 
-function hideContextMenu() {
-  menuContainer.style.display = 'none';
-  menuContainer.innerHTML = '';
-  if (menuHideHandler) {
-    document.removeEventListener('mousedown', menuHideHandler);
-    document.removeEventListener('keydown', menuHideHandler);
-    menuHideHandler = null;
-  }
-}
+  function positionWithinViewport(x,y,el){ const vw=window.innerWidth, vh=window.innerHeight; el.style.left='-9999px'; el.style.top='-9999px'; const r=el.getBoundingClientRect(); let left=x, top=y; if(left+r.width>vw-6) left=vw-r.width-6; if(top+r.height>vh-6) top=vh-r.height-6; if(left<6) left=6; if(top<6) top=6; el.style.left=left+'px'; el.style.top=top+'px'; }
+  function positionSubmenu(anchor,panel){ const a=anchor.getBoundingClientRect(); panel.style.left='0px'; panel.style.top='0px'; panel.classList.remove('hidden'); const r=panel.getBoundingClientRect(); let left=a.right+6, top=a.top; const vw=window.innerWidth, vh=window.innerHeight; if(left+r.width>vw-6) left=a.left-r.width-6; if(top+r.height>vh-6) top=vh-r.height-6; if(top<6) top=6; const rootRect=root.getBoundingClientRect(); panel.style.left=(left-rootRect.left)+'px'; panel.style.top=(top-rootRect.top)+'px'; }
 
-// Export за модулно включване (по желание)
-window.showContextMenu = showContextMenu;
-window.hideContextMenu = hideContextMenu;
+  function showContextMenu(pageX,pageY,items){ state.lastItems=items||[]; state.isOpen=true; root.classList.remove('hidden'); root.setAttribute('aria-hidden','false'); clearRoot(); buildMenu(state.lastItems, root); positionWithinViewport(pageX,pageY,root); addGlobals(); }
+
+  window.showContextMenu = showContextMenu;
+  window.hideContextMenu = hideContextMenu;
+})();
 </script>
