@@ -65,7 +65,7 @@ function injectHandleStyles(){
     body.constraints-mode .widget *, body.constraints-mode .widget::before, body.constraints-mode .widget::after{ pointer-events:none; }
     body.constraints-mode .widget .c-handle{ pointer-events:auto !important; }
 
-    .c-handle{position:absolute; z-index:999; background:#49c0ff; opacity:.3; border-radius:50%; box-shadow:0 0 0 1px rgba(0,0,0,.25); width:16px; height:16px; transform: translate(-50%, -50%);}
+    .c-handle{position:absolute; z-index:999; background:#49c0ff; opacity:.2; border-radius:50%; box-shadow:0 0 0 1px rgba(0,0,0,.25); width:8px; height:8px; transform: translate(-50%, -50%);}
     .c-handle.small-dot{width:4px;height:4px}
     .c-handle.hover{opacity:1; transform: translate(-50%, -50%) scale(1.15);}    
     .c-handle.pick{background:#ffd257; opacity:1;}
