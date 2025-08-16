@@ -472,6 +472,67 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   });
+
+      // === Context-menu actions (stubs / minimal) ===
+      let _clipboard = [];
+      
+      function _selected() {
+        return Array.from(document.querySelectorAll('.widget.selected'));
+      }
+      
+      function groupSelected() {
+        // TODO: реално групиране; засега само лог
+        console.log('Group', _selected());
+      }
+      
+      function ungroupSelected() {
+        console.log('Ungroup', _selected());
+      }
+      
+      function copySelected() {
+        _clipboard = _selected().map(n => {
+          const clone = n.cloneNode(true);
+          // запазваме и позициите
+          clone.setAttribute('data-x', n.getAttribute('data-x') || '0');
+          clone.setAttribute('data-y', n.getAttribute('data-y') || '0');
+          clone.style.transform = n.style.transform;
+          clone.style.width = n.style.width;
+          clone.style.height = n.style.height;
+          return clone;
+        });
+        console.log('Copied', _clipboard.length);
+      }
+      
+      function pasteClipboard() {
+        if (!_clipboard.length) return;
+        const canvas = document.getElementById('canvas');
+        let i = 0;
+        for (const c of _clipboard) {
+          const el = c.cloneNode(true);
+          el.classList.remove('selected');
+          // уникално id
+          el.id = 'widget-' + Math.random().toString(36).slice(2, 8);
+          // offset, за да се вижда
+          const x = (parseFloat(c.getAttribute('data-x')) || 0) + 20 + i * 5;
+          const y = (parseFloat(c.getAttribute('data-y')) || 0) + 20 + i * 5;
+          el.setAttribute('data-x', x);
+          el.setAttribute('data-y', y);
+          el.style.transform = `translate(${x}px, ${y}px)`;
+          canvas.appendChild(el);
+          i++;
+        }
+      }
+      
+      function duplicateSelected() {
+        _clipboard = _selected().map(n => n); // използваме избраните
+        pasteClipboard();
+      }
+      
+      function deleteSelected() {
+        for (const w of _selected()) w.remove();
+      }
+
+  
   loadComponent('#context-menu-mount', 'components/context-menu.html').then(() => {
   // Това се изпълнява след като context менюто е заредено!
 
