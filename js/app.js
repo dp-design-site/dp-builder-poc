@@ -92,7 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initSelection();
 
   // Ribbon mount
-   loadComponent('#ribbon-mount', 'components/ribbon.html').then(() => {
+  loadComponent('#ribbon-mount', 'components/ribbon.html').then(() => {
     window.Constraints?.init();
   });
 
@@ -134,6 +134,8 @@ document.addEventListener('DOMContentLoaded', () => {
           w.style.transform = `translate(${x}px, ${y}px)`;
           w.setAttribute('data-x', x);
           w.setAttribute('data-y', y);
+          // live constraints: вериги следват движението
+          window.Constraints?.applyAround?.(w.id);
         }
       },
       end () {
@@ -211,12 +213,15 @@ document.addEventListener('DOMContentLoaded', () => {
         event.target.style.width  = Math.max(40, snappedW) + 'px';
         event.target.style.height = Math.max(40, snappedH) + 'px';
 
+        // live constraints при resize
+        window.Constraints?.applyAround?.(event.target.id);
+
         if (vGuide && vGuidePos !== null) showGuideLocal('v', vGuidePos); else { const gv=document.getElementById('guide-v'); if (gv) gv.style.display='none'; }
         if (hGuide && hGuidePos !== null) showGuideLocal('h', hGuidePos); else { const gh=document.getElementById('guide-h'); if (gh) gh.style.display='none'; }
       },
       end () { hideGuides(); }
     }
-  });
+  }); 
 
   // === Context Menu Mount ===
   loadComponent('#context-menu-mount', 'components/context-menu.html').then(() => {
