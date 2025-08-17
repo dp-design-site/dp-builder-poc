@@ -1,5 +1,5 @@
 // js/core/constraints-engine.js
-// Минимален двигател за констрайнти: създаване, изтриване и прилагане с реални връзки.
+// Двигател за констрайнти: създаване, изтриване и ПРИЛАГАНЕ с реални връзки (каскадно около мръднал елемент)
 
 const store = {
   list: new Map(),          // id -> Constraint
@@ -8,25 +8,28 @@ const store = {
 
 function uid() { return 'c_' + Math.random().toString(36).slice(2, 9); }
 
+function getXY(el){
+  return {
+    x: parseFloat(el.getAttribute('data-x')) || 0,
+    y: parseFloat(el.getAttribute('data-y')) || 0,
+  };
+}
+function setPos(el, x, y){
+  el.style.transform = `translate(${x}px, ${y}px)`;
+  el.setAttribute('data-x', x);
+  el.setAttribute('data-y', y);
+}
 function getRect(el){
-  const x = parseFloat(el.getAttribute('data-x')) || 0;
-  const y = parseFloat(el.getAttribute('data-y')) || 0;
+  const {x,y} = getXY(el);
   const w = el.getBoundingClientRect().width;
   const h = el.getBoundingClientRect().height;
   return { left:x, right:x+w, top:y, bottom:y+h, centerX:x+w/2, centerY:y+h/2 };
 }
-
 function anchorValue(rect, anchor){
   switch(anchor){
     case 'left': return rect.left; case 'right': return rect.right; case 'centerX': return rect.centerX;
     case 'top': return rect.top; case 'bottom': return rect.bottom; case 'centerY': return rect.centerY;
   }
-}
-
-function setPos(el, x, y){
-  el.style.transform = `translate(${x}px, ${y}px)`;
-  el.setAttribute('data-x', x);
-  el.setAttribute('data-y', y);
 }
 
 function addIndex(elId, cid){ if(!store.byEl.has(elId)) store.byEl.set(elId, new Set()); store.byEl.get(elId).add(cid); }
@@ -37,7 +40,8 @@ export function createConstraint(aEl, aAnchor, bEl, bAnchor){
   const c = { id: uid(), axis, a: {id:aEl.id, anchor:aAnchor}, b:{id:bEl.id, anchor:bAnchor} };
   store.list.set(c.id, c);
   addIndex(c.a.id, c.id); addIndex(c.b.id, c.id);
-  applyConstraints(); // моментално прилагане
+  // начално прилагане – придвижваме B към A
+  applyConstraint(c, c.a.id);
   return c.id;
 }
 
@@ -52,39 +56,80 @@ export function getConstraintsForElement(elId){
   return ids.map(id => store.list.get(id)).filter(Boolean);
 }
 
+// ===== Прилагане на ЕДИН констрайнт относно конкретно "мръднал" край =====
+function applyConstraint(c, draggedId){
+  const aEl = document.getElementById(c.a.id);
+  const bEl = document.getElementById(c.b.id);
+  if (!aEl || !bEl) return;
+
+  const ar = getRect(aEl); const br = getRect(bEl);
+  const av = anchorValue(ar, c.a.anchor);
+  const bv = anchorValue(br, c.b.anchor);
+
+  if (draggedId === c.a.id){
+    if (c.axis === 'x') setPos(bEl, getXY(bEl).x + (av - bv), getXY(bEl).y);
+    else                setPos(bEl, getXY(bEl).x, getXY(bEl).y + (av - bv));
+  } else if (draggedId === c.b.id){
+    if (c.axis === 'x') setPos(aEl, getXY(aEl).x + (bv - av), getXY(aEl).y);
+    else                setPos(aEl, getXY(aEl).x, getXY(aEl).y + (bv - av));
+  } else {
+    // по подразбиране местим B към A
+    if (c.axis === 'x') setPos(bEl, getXY(bEl).x + (av - bv), getXY(bEl).y);
+    else                setPos(bEl, getXY(bEl).x, getXY(bEl).y + (av - bv));
+  }
+}
+
+// Приложи всички констрайнти ОКОЛО даден елемент (с каскада по веригата)
+export function applyAround(elId, maxDepth = 8){
+  const visited = new Set();
+  const q = [elId];
+  let depth = 0;
+  while (q.length && depth < maxDepth){
+    const current = q.shift();
+    if (visited.has(current)) { depth++; continue; }
+    visited.add(current);
+    const ids = Array.from(store.byEl.get(current) || []);
+    for (const cid of ids){
+      const c = store.list.get(cid); if (!c) continue;
+      applyConstraint(c, current);
+      const other = (c.a.id === current) ? c.b.id : c.a.id;
+      q.push(other);
+    }
+    depth++;
+  }
+}
+
+// Глобално прилагане – полезно след import()
 export function applyConstraints(){
-  // итеративно прилагане докато няма промяна (за стабилност)
-  let changed;
-  let iterations = 0;
+  let changed; let iterations = 0;
   do {
-    changed = false;
-    iterations++;
+    changed = false; iterations++;
     for (const c of store.list.values()){
       const aEl = document.getElementById(c.a.id);
       const bEl = document.getElementById(c.b.id);
       if (!aEl || !bEl) continue;
-
       const ar = getRect(aEl); const br = getRect(bEl);
       const av = anchorValue(ar, c.a.anchor);
       const bv = anchorValue(br, c.b.anchor);
-
       if (c.axis === 'x'){
-        const dx = av - bv;
-        if (Math.abs(dx) > 0.5){
-          const nx = (parseFloat(bEl.getAttribute('data-x'))||0) + dx;
-          setPos(bEl, nx, parseFloat(bEl.getAttribute('data-y'))||0);
-          changed = true;
-        }
+        const dx = av - bv; if (Math.abs(dx) > 0.5){ setPos(bEl, getXY(bEl).x + dx, getXY(bEl).y); changed = true; }
       } else {
-        const dy = av - bv;
-        if (Math.abs(dy) > 0.5){
-          const ny = (parseFloat(bEl.getAttribute('data-y'))||0) + dy;
-          setPos(bEl, parseFloat(bEl.getAttribute('data-x'))||0, ny);
-          changed = true;
-        }
+        const dy = av - bv; if (Math.abs(dy) > 0.5){ setPos(bEl, getXY(bEl).x, getXY(bEl).y + dy); changed = true; }
       }
     }
   } while (changed && iterations < 10);
+}
+
+// Визуално: анкерите, които участват в връзки за даден елемент
+export function getUsedAnchors(elId){
+  const out = new Map(); // anchor -> [{id, otherElId, otherAnchor}]
+  for (const c of getConstraintsForElement(elId)){
+    const side = (c.a.id === elId) ? c.a : c.b;
+    const other = (c.a.id === elId) ? c.b : c.a;
+    if (!out.has(side.anchor)) out.set(side.anchor, []);
+    out.get(side.anchor).push({ id: c.id, otherElId: other.id, otherAnchor: other.anchor });
+  }
+  return out;
 }
 
 export function serializeConstraints(){
