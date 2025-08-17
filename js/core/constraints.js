@@ -1,5 +1,5 @@
 // js/core/constraints.js — v2: Click→Click, показваме само върху hover + индикатори за използвани точки и контекстно меню Edit/Delete
-import { createConstraint, deleteConstraint, getConstraintsForElement, applyConstraintsFor, getUsedAnchors, applyAround } from './constraints-engine.js';
+import { createConstraint, deleteConstraint, getConstraintsForElement, applyConstraints, getUsedAnchors, applyAround } from './constraints-engine.js';
 
 const state = {
   mode: 'none',            // 'none' | 'alignV' | 'alignH'
