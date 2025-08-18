@@ -1,8 +1,8 @@
 /*
- DP Configurator — Properties Panel (v0.12, MVP)
+ DP Configurator — Properties Panel (v0.13, layout tweaks)
  File: js/ui/properties.js
 
- Scope of v0.12:
+ Scope of v0.13:
  - Right sidebar panel that edits a SINGLE selected widget.
  - Groups implemented: "Идентичност" (ID/Name), "Разположение" (X,Y,W,H,Z-index), "Външен вид" (bg, border, radius, shadow).
  - Two-way sync:
@@ -10,6 +10,9 @@
     • When inputs change, widget styles update live.
  - Appearance is applied to an inner wrapper if present ('.wb') to avoid
    clobbering the selection highlight on the outer .widget.
+ - Layout improvements:
+    • Coordinates arranged in two rows (X/Y then W/H).
+    • Color fields arranged side-by-side with HEX inputs.
 */
 
 (function (global) {
@@ -50,7 +53,6 @@
   const defer = (fn) => () => requestAnimationFrame(fn);
 
   function onMutations(muts) {
-    // If the selected widget changed (moved/resized/selected toggle), update fields
     if (!S.selected) return;
     for (const m of muts) {
       if (m.target === S.selected || S.selected.contains(m.target)) {
@@ -89,7 +91,6 @@
     setValue('#f-shadow-spread', num(state?.shadow?.spread ?? 0));
     setColor('#f-shadow-color', '#f-shadow-hex', state?.shadow?.color || '#000000');
 
-    // Enable/disable sections
     setDisabledGroup(!S.selected);
   }
 
@@ -100,13 +101,6 @@
     if (!node) return;
     if (node.type === 'checkbox') node.checked = !!v;
     else node.value = v ?? '';
-    // Ensure proper sizing
-    if (node.tagName === 'INPUT' && node.type === 'text') {
-      node.style.minWidth = '80px';
-    }
-    if (node.tagName === 'INPUT' && node.type === 'number') {
-      node.style.minWidth = '60px';
-    }
   }
 
   function getValue(sel) {
