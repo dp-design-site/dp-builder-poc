@@ -1,5 +1,5 @@
 /*
- DP Configurator — Properties Panel Styles (v0.13)
+ DP Configurator — Properties Panel Styles (v0.14)
  File: css/properties.css
 */
 
@@ -16,7 +16,7 @@
   background: var(--dp-panel,#0d0f11);
   color: var(--dp-text,#e6eaf0);
   box-shadow: var(--dp-shadow, 0 6px 18px rgba(0,0,0,.28));
-  overflow-y: auto;       /* скрол при нужда */
+  overflow: hidden;
 }
 
 /* Ensure consistent sizing inside the panel so buttons/inputs don't overflow */
@@ -26,7 +26,7 @@
   position: relative;
   flex: 1 1 auto;
   min-height: 0;
-  overflow-y: auto;
+  overflow-y: auto; /* allow scroll when content is taller */
   overflow-x: hidden;
   padding: 10px;
   display: flex;
@@ -77,8 +77,8 @@
 
 /* Layout variants for different row types */
 .prop-row.row-2 { grid-template-columns: 60px 1fr; }
-.prop-row.row-4 { grid-template-columns: 60px 1fr 60px 1fr; }
-.prop-row.row-color { grid-template-columns: 60px 44px 1fr; align-items: center; }
+.prop-row.row-4 { grid-template-columns: 40px 1fr 40px 1fr; } /* compact X/Y and W/H */
+.prop-row.row-color { grid-template-columns: 60px 44px 1fr; align-items: center; } /* palette + hex */
 .shadow-row { grid-template-columns: 24px 64px repeat(4, 1fr) 44px 120px; gap: 6px; }
 
 .prop-label { font-size: 12px; color: var(--dp-text-dim,#b6beca); }
