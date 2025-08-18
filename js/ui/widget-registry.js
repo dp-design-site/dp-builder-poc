@@ -222,4 +222,4 @@
     console.warn('WidgetRegistry default registration failed:', e);
   }
 
-});
+})(window);
