@@ -16,7 +16,7 @@
   background: var(--dp-panel,#0d0f11);
   color: var(--dp-text,#e6eaf0);
   box-shadow: var(--dp-shadow, 0 6px 18px rgba(0,0,0,.28));
-  overflow: hidden;
+  overflow-y: auto;       /* скрол при нужда */
 }
 
 /* Ensure consistent sizing inside the panel so buttons/inputs don't overflow */
