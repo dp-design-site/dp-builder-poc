@@ -1,4 +1,4 @@
-// js/core/snap.js
+// js/core/snap.js — left/top priority + first-hit lock (no overwrite by later matches)
 let SNAP_TOL = 3;
 let SNAP_ENABLED = true;
 let SNAP_EDGES = true;
@@ -76,55 +76,79 @@ export function smartSnap(target, nx, ny, event = {}) {
   const ignoreSelected = target.classList.contains('selected');
   const tr = getRect(target);
   let snappedX = nx, snappedY = ny;
-  let vGuide = null, hGuide = null;
-  let vGuidePos = null, hGuidePos = null;
+  let vGuide = null, hGuide = null; let vGuidePos = null, hGuidePos = null;
+
+  let xLocked = false; // щом изберем Х snap, не го презаписваме от по-късни кандидати
+  let yLocked = false;
 
   for (const other of allWidgets(target, ignoreSelected)) {
     const or = getRect(other);
 
-    // Vertical
-    if (SNAP_EDGES) {
-      for (const tx of [tr.left, tr.right]) {
-        for (const ox of [or.left, or.right]) {
-          if (Math.abs((nx + (tx - tr.left)) - ox) < SNAP_TOL) {
+    // ====== X (вертикални направляващи) ======
+    if (!xLocked && SNAP_EDGES) {
+      // приоритет: LEFT → RIGHT
+      const txs = [tr.left, tr.right];
+      const oxs = [or.left, or.right];
+      outerX: for (const tx of txs) {
+        for (const ox of oxs) {
+          const candidate = nx + (tx - tr.left);
+          if (Math.abs(candidate - ox) < SNAP_TOL) {
             snappedX = ox - (tx - tr.left);
-            vGuide = true; vGuidePos = snappedX + (tx - tr.left);
+            vGuide = true; vGuidePos = ox; xLocked = true;
+            break outerX;
           }
         }
       }
     }
-    if (SNAP_CENTERS) {
-      for (const tx of [tr.left, tr.centerX, tr.right]) {
-        for (const ox of [or.left, or.centerX, or.right]) {
-          if (Math.abs((nx + (tx - tr.left)) - ox) < SNAP_TOL) {
+    if (!xLocked && SNAP_CENTERS) {
+      // приоритет: left/center/right срещу left/center/right — първият удар печели
+      const txs = [tr.left, tr.centerX, tr.right];
+      const oxs = [or.left, or.centerX, or.right];
+      outerXC: for (const tx of txs) {
+        for (const ox of oxs) {
+          const candidate = nx + (tx - tr.left);
+          if (Math.abs(candidate - ox) < SNAP_TOL) {
             snappedX = ox - (tx - tr.left);
-            vGuide = true; vGuidePos = snappedX + (tx - tr.left);
+            vGuide = true; vGuidePos = ox; xLocked = true;
+            break outerXC;
           }
         }
       }
     }
 
-    // Horizontal
-    if (SNAP_EDGES) {
-      for (const ty of [tr.top, tr.bottom]) {
-        for (const oy of [or.top, or.bottom]) {
-          if (Math.abs((ny + (ty - tr.top)) - oy) < SNAP_TOL) {
+    // ====== Y (хоризонтални направляващи) ======
+    if (!yLocked && SNAP_EDGES) {
+      // приоритет: TOP → BOTTOM
+      const tys = [tr.top, tr.bottom];
+      const oys = [or.top, or.bottom];
+      outerY: for (const ty of tys) {
+        for (const oy of oys) {
+          const candidate = ny + (ty - tr.top);
+          if (Math.abs(candidate - oy) < SNAP_TOL) {
             snappedY = oy - (ty - tr.top);
-            hGuide = true; hGuidePos = snappedY + (ty - tr.top);
+            hGuide = true; hGuidePos = oy; yLocked = true;
+            break outerY;
           }
         }
       }
     }
-    if (SNAP_CENTERS) {
-      for (const ty of [tr.centerY]) {
-        for (const oy of [or.centerY]) {
-          if (Math.abs((ny + (ty - tr.top)) - oy) < SNAP_TOL) {
+    if (!yLocked && SNAP_CENTERS) {
+      const tys = [tr.centerY];
+      const oys = [or.centerY];
+      outerYC: for (const ty of tys) {
+        for (const oy of oys) {
+          const candidate = ny + (ty - tr.top);
+          if (Math.abs(candidate - oy) < SNAP_TOL) {
             snappedY = oy - (ty - tr.top);
-            hGuide = true; hGuidePos = snappedY + (ty - tr.top);
+            hGuide = true; hGuidePos = oy; yLocked = true;
+            break outerYC;
           }
         }
       }
     }
+
+    // ако и двете оси са заключени, няма смисъл да обхождаме други
+    if (xLocked && yLocked) break;
   }
 
   if (vGuide && vGuidePos !== null) showGuide('v', vGuidePos);
@@ -134,12 +158,11 @@ export function smartSnap(target, nx, ny, event = {}) {
 
   return { x: snappedX, y: snappedY };
 }
-// В core/snap.js
-export function snapResize(event, start, moving) {
-  // moving: {left?:bool,right?:bool,top?:bool,bottom?:bool}
-  const tol = SNAP_TOL;
 
-  // 1) Кандидат стойности (без DOM writes)
+// (Опционално) изнесен resize snap – оставен без промени;
+// ако искаш същия ляв/горен приоритет и при resize, кажи да го заключим аналогично с флагове.
+export function snapResize(event, start, moving) {
+  const tol = SNAP_TOL;
   let x = start.x + event.deltaRect.left;
   let y = start.y + event.deltaRect.top;
   let w = start.w + event.deltaRect.width;
@@ -150,43 +173,37 @@ export function snapResize(event, start, moving) {
   let top    = y;
   let bottom = y + h;
 
-  // 2) Снап само на активните ръбове (без центрове за стабилност)
   if (SNAP_ENABLED && !event.shiftKey) {
     for (const other of allWidgets(event.target)) {
       const or = getRect(other);
-
-      // хоризонтални ръбове
       if (SNAP_EDGES) {
         if (moving.left) {
           if (Math.abs(left - or.left)  < tol) left  = or.left;
-          if (Math.abs(left - or.right) < tol) left  = or.right;
+          else if (Math.abs(left - or.right) < tol) left  = or.right; // left приоритет
         }
         if (moving.right) {
           if (Math.abs(right - or.left)  < tol) right = or.left;
-          if (Math.abs(right - or.right) < tol) right = or.right;
+          else if (Math.abs(right - or.right) < tol) right = or.right;
         }
       }
-
-      // вертикални ръбове
       if (SNAP_EDGES) {
         if (moving.top) {
           if (Math.abs(top - or.top)    < tol) top    = or.top;
-          if (Math.abs(top - or.bottom) < tol) top    = or.bottom;
+          else if (Math.abs(top - or.bottom) < tol) top    = or.bottom; // top приоритет
         }
         if (moving.bottom) {
           if (Math.abs(bottom - or.top)    < tol) bottom = or.top;
-          if (Math.abs(bottom - or.bottom) < tol) bottom = or.bottom;
+          else if (Math.abs(bottom - or.bottom) < tol) bottom = or.bottom;
         }
       }
     }
   }
 
-  // 3) Рекомпозиция спрямо фиксирания ръб (другият остава от стартовия rect)
   if (moving.left && !moving.right) {
     x = left;               w = start.right  - left;
   } else if (moving.right && !moving.left) {
     x = start.x;            w = right - start.x;
-  } else { // и двата (рядко) – приемаме left/right като граници
+  } else {
     x = left;               w = right - left;
   }
 
@@ -198,13 +215,10 @@ export function snapResize(event, start, moving) {
     y = top;                h = bottom - top;
   }
 
-  // 4) Минимални размери и леко закръгляне за стабилен UI
   w = Math.max(40, w);
   h = Math.max(40, h);
-  // по желание: закръгляй до цели пиксели, но не е задължително
   x = Math.round(x); y = Math.round(y);
   w = Math.round(w); h = Math.round(h);
 
   return { x, y, w, h };
 }
-
