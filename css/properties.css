@@ -1,0 +1,103 @@
+/*
+ DP Configurator — Properties Panel Styles (v0.1)
+ File: css/properties.css
+*/
+
+#properties-panel.dp-props,
+.dp-props { /* allow mounting on any container */
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 320px;
+  min-width: 260px;
+  max-width: 420px;
+  height: 100%;
+  border-left: var(--dp-border,1px) solid var(--dp-border-col,#2a2f36);
+  background: var(--dp-panel,#0d0f11);
+  color: var(--dp-text,#e6eaf0);
+  box-shadow: var(--dp-shadow, 0 6px 18px rgba(0,0,0,.28));
+  overflow: hidden;
+}
+
+.dp-props .props-root {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--dp-bg,#101214);
+}
+
+.prop-section {
+  border: var(--dp-border,1px) solid var(--dp-border-col,#2a2f36);
+  border-radius: var(--dp-radius-lg,12px);
+  background: var(--dp-bg-elev-2,#1a1f24);
+  overflow: hidden;
+}
+
+.prop-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  font-weight: 600;
+  background: linear-gradient(0deg, transparent, var(--dp-hover, rgba(255,255,255,.04)));
+  border-bottom: var(--dp-border,1px) solid var(--dp-border-col,#2a2f36);
+}
+
+.prop-title { font-size: 14px; }
+
+.prop-toggle {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: var(--dp-border,1px) solid var(--dp-border-col,#2a2f36);
+  border-radius: var(--dp-radius-sm,8px);
+  background: transparent;
+  color: var(--dp-text-dim,#b6beca);
+  cursor: pointer;
+}
+
+.prop-section.collapsed .prop-body { display: none; }
+
+.prop-body { padding: 10px; display: flex; flex-direction: column; gap: 10px; }
+
+.prop-row { display: grid; grid-template-columns: 90px 1fr 1fr 1fr 1fr 1fr; gap: 8px; align-items: center; }
+.prop-label { font-size: 12px; color: var(--dp-text-dim,#b6beca); }
+
+.prop-row input[type="text"],
+.prop-row input[type="number"],
+.prop-row input[type="color"],
+.prop-row button.prop-btn {
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--dp-border-col,#2a2f36);
+  background: var(--dp-input-bg,#0a0c0e);
+  color: var(--dp-text,#e6eaf0);
+  padding: 0 8px;
+}
+
+.prop-row input[type="color"] { padding: 0; }
+.prop-row input[readonly] { opacity: .7; }
+
+.prop-row .hex { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+
+/* Z-index line buttons */
+.zline { display: grid; grid-template-columns: 90px 1fr auto auto auto auto; gap: 8px; align-items: center; }
+.prop-btn { cursor: pointer; }
+
+/* Light theme tweaks */
+.theme-light .dp-props { background: var(--dp-panel,#fff); color: var(--dp-text,#111827); }
+.theme-light .dp-props .props-root { background: var(--dp-bg,#f7f8fa); }
+
+/* Scrollbar styling */
+.dp-props .props-root { scrollbar-color: var(--dp-border-col) transparent; scrollbar-width: thin; }
+.dp-props .props-root::-webkit-scrollbar { width: 10px; }
+.dp-props .props-root::-webkit-scrollbar-track { background: transparent; }
+.dp-props .props-root::-webkit-scrollbar-thumb { background-color: var(--dp-border-col); border-radius: 10px; border: 2px solid transparent; background-clip: padding-box; }
+.dp-props .props-root::-webkit-scrollbar-thumb:hover { background-color: color-mix(in srgb, var(--dp-border-col) 80%, var(--dp-text) 20%); }
