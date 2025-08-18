@@ -1,17 +1,11 @@
 /*
- DP Configurator — Library Panel (v0.1)
+ DP Configurator — Library Panel (v0.2)
  File: js/ui/library.js
 
- Goals in this first drop:
- 1) Render a collapsible left sidebar (the Library) inside a provided container.
- 2) Show categories (Containers / Doors / Windows / My Saved) with simple items.
- 3) Support basic drag-from-library → drop-into-canvas to create a new widget.
- 4) Make newly created widgets compatible with existing move/resize/snap systems
-    by:
-    - giving them the ".widget" class
-    - setting absolute positioning within the canvas
-    - not making them HTML5-draggable after creation (your move/resize handles will take over)
-    - optionally calling window.dp?.registerWidget if your app exposes such hook
+ Changes in v0.2:
+ - Simplified to a single category "Елементи" with one starter item: Window (window-basic)
+ - Added live ghost preview when dragging over canvas (exact size/position under cursor)
+ - Kept compatibility with existing move/resize/snap systems and global dp.registerWidget
 
  Usage from app.js (no DOMContentLoaded here by design):
    LibraryUI.mount({
@@ -25,6 +19,7 @@
 
  Notes:
  - We rely on native HTML5 D&D for library → canvas only.
+ - We show a .widget-ghost on the canvas during dragover to preview placement.
  - We do NOT hijack your internal drag/resize logic; after drop we create a
    positioned .widget and hand control back to your existing systems.
  - ALT-snap modifier etc. remain fully in your snap/constraints code.
@@ -33,33 +28,11 @@
 (function (global) {
   const DEFAULT_CATEGORIES = [
     {
-      id: "cat-containers",
-      name: "Контейнер",
+      id: "cat-widgets",
+      name: "Елементи",
       items: [
-        { id: "container-std", label: "Container (Std)", w: 220, h: 140 },
-        { id: "container-wide", label: "Container (Wide)", w: 280, h: 140 },
+        { id: "window-basic", label: "Window", w: 120, h: 60 },
       ],
-    },
-    {
-      id: "cat-doors",
-      name: "Врата",
-      items: [
-        { id: "door-single", label: "Door (Single)", w: 36, h: 80 },
-        { id: "door-double", label: "Door (Double)", w: 72, h: 80 },
-      ],
-    },
-    {
-      id: "cat-windows",
-      name: "Прозорец",
-      items: [
-        { id: "window-small", label: "Window (S)", w: 60, h: 40 },
-        { id: "window-wide", label: "Window (Wide)", w: 120, h: 40 },
-      ],
-    },
-    {
-      id: "cat-saved",
-      name: "My Saved",
-      items: [], // will be populated by save-to-library in later steps
     },
   ];
 
@@ -75,6 +48,7 @@
     els: {
       sidebar: null,
       canvas: null,
+      ghost: null,
     },
   };
 
@@ -249,31 +223,84 @@
   }
 
   /**
-   * Wire drop target on the canvas
+   * Wire drop target on the canvas + ghost preview
    */
   function wireCanvasDnD(canvas) {
     canvas.addEventListener("dragover", (ev) => {
       // Allow drop
       ev.preventDefault();
       ev.dataTransfer.dropEffect = "copy";
-    });
 
-    canvas.addEventListener("drop", (ev) => {
-      ev.preventDefault();
       try {
         const json = ev.dataTransfer.getData("application/json");
         if (!json) return;
         const data = JSON.parse(json);
         if (!data || data.type !== "dp-lib-item") return;
 
+        // Show/update ghost following cursor
         const canvasRect = canvas.getBoundingClientRect();
         const x = ev.clientX - canvasRect.left;
         const y = ev.clientY - canvasRect.top;
+        ensureGhost();
+        updateGhostPosition(x, y, data.item);
+        canvas.classList.add('dp-drop-over');
+      } catch(_) { /* ignore */ }
+    });
+
+    canvas.addEventListener("dragleave", () => {
+      removeGhost();
+      canvas.classList.remove('dp-drop-over');
+    });
+
+    canvas.addEventListener("drop", (ev) => {
+      ev.preventDefault();
+      canvas.classList.remove('dp-drop-over');
+      try {
+        const json = ev.dataTransfer.getData("application/json");
+        if (!json) { removeGhost(); return; }
+        const data = JSON.parse(json);
+        if (!data || data.type !== "dp-lib-item") { removeGhost(); return; }
+
+        const canvasRect = canvas.getBoundingClientRect();
+        const x = ev.clientX - canvasRect.left;
+        const y = ev.clientY - canvasRect.top;
+        removeGhost();
         createWidgetOnCanvas({ x, y, item: data.item });
       } catch (e) {
         console.warn("LibraryUI.drop: parse error", e);
+        removeGhost();
       }
     });
+  }
+
+  /** Ensure there is a single ghost element on canvas */
+  function ensureGhost() {
+    if (S.els.ghost && S.els.ghost.isConnected) return S.els.ghost;
+    const g = el('div', { class: 'widget-ghost' });
+    S.cfg.canvas.appendChild(g);
+    S.els.ghost = g;
+    return g;
+  }
+
+  /** Update ghost size/position to follow cursor (centered under pointer) */
+  function updateGhostPosition(x, y, item) {
+    const g = ensureGhost();
+    const w = toInt(item?.w, 120);
+    const h = toInt(item?.h, 80);
+    const left = Math.round(x - w / 2);
+    const top  = Math.round(y - h / 2);
+    g.style.width = w + 'px';
+    g.style.height = h + 'px';
+    g.style.left = left + 'px';
+    g.style.top  = top + 'px';
+  }
+
+  /** Remove ghost from canvas */
+  function removeGhost() {
+    if (S.els.ghost && S.els.ghost.parentNode) {
+      S.els.ghost.parentNode.removeChild(S.els.ghost);
+    }
+    S.els.ghost = null;
   }
 
   /**
@@ -313,7 +340,7 @@
   }
 
   /** Save a ready widget configuration back to the Library (stub for later) */
-  function saveCustomToLibrary({ name, snapshot, categoryId = "cat-saved" }) {
+  function saveCustomToLibrary({ name, snapshot, categoryId = "cat-widgets" }) {
     // snapshot may contain: geometry, params, style, constraints refs, etc.
     const cat = S.categories.find(c => c.id === categoryId);
     if (!cat) return false;
