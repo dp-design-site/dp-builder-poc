@@ -14,12 +14,13 @@
   <link rel="stylesheet" href="css/ribbon.css" />
   <link rel="stylesheet" href="css/constraints.css" />
   <link rel="stylesheet" href="css/library.css" />
+  <link rel="stylesheet" href="css/properties.css" />
 
   <!-- Minimal layout helper for sidebar + canvas; keep lightweight to avoid conflicts -->
   <style>
     html, body { height: 100%; margin: 0; }
     body { display: flex; flex-direction: column; overflow: hidden; }
-    #workspace { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: auto 1fr; }
+    #workspace { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: auto 1fr auto; }
     /* Left panel width is controlled inside css/library.css via #library-panel */
     #main-stage { position: relative; display: flex; flex-direction: column; min-width: 0; }
     #canvas { position: relative; flex: 1 1 auto; min-height: 0; }
@@ -31,7 +32,7 @@
   <!-- Ribbon mount (kept) -->
   <div id="ribbon-mount"></div>
 
-  <!-- Workspace: Library Sidebar + Main Stage (Canvas + Bars) -->
+  <!-- Workspace: Library Sidebar + Main Stage (Canvas + Bars) + Properties Panel -->
   <div id="workspace">
     <!-- Left Sidebar Library -->
     <aside id="library-panel" aria-label="Библиотека"></aside>
@@ -66,6 +67,9 @@
         <label>Width: <input type="number" id="guide-width" min="0.5" max="8" value="1" style="width:40px"></label>
       </div>
     </section>
+
+    <!-- Right Properties Panel -->
+    <aside id="properties-panel" aria-label="Свойства"></aside>
   </div>
 
   <!-- External deps -->
@@ -84,10 +88,13 @@
   <!-- Library panel module -->
   <script src="js/ui/library.js"></script>
 
+  <!-- Properties panel module -->
+  <script src="js/ui/properties.js"></script>
+
   <!-- Bootstrap Library → Canvas wiring -->
   <script>
     // Mount the library after app bootstrap; if app needs to expose hooks like dp.registerWidget, it should do so before this runs.
-    (function initLibrary() {
+    (function initPanels() {
       try {
         if (!window.LibraryUI) return console.warn('LibraryUI not found: js/ui/library.js not loaded');
         LibraryUI.mount({ container: '#library-panel', canvas: '#canvas' });
@@ -97,8 +104,15 @@
         canvas.addEventListener('dragover', () => canvas.classList.add('dp-drop-over'));
         canvas.addEventListener('dragleave', () => canvas.classList.remove('dp-drop-over'));
         canvas.addEventListener('drop', () => canvas.classList.remove('dp-drop-over'));
+
+        // Mount Properties
+        if (window.PropertiesUI) {
+          PropertiesUI.mount({ container: '#properties-panel' });
+        } else {
+          console.warn('PropertiesUI not found: js/ui/properties.js not loaded');
+        }
       } catch (e) {
-        console.error('Library init error:', e);
+        console.error('Init error:', e);
       }
     })();
   </script>
