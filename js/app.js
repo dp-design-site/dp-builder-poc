@@ -40,6 +40,67 @@ function showGuideLocal(axis, pos) {
 }
 
 // ==============================
+// Helpers за интеграция с LibraryUI (важно за новосъздадени елементи)
+// ==============================
+function uid(prefix = 'w') {
+  const r = Math.random().toString(36).slice(2, 8);
+  const t = (Date.now() % 1e6).toString(36);
+  return `${prefix}-${t}${r}`;
+}
+
+/**
+ * Инициализира стартова позиция на widget, ако е създаден с left/top.
+ * Конвертира към transform + data-x/data-y, за да не "подскача" при първо влачене.
+ */
+function normalizeWidgetPosition(widget) {
+  const style = window.getComputedStyle(widget);
+  const left = parseFloat(style.left) || 0;
+  const top  = parseFloat(style.top)  || 0;
+
+  // Ако вече имаме data-x/y → приемаме, че е нормализиран
+  let x = parseFloat(widget.getAttribute('data-x')); if (!Number.isFinite(x)) x = left;
+  let y = parseFloat(widget.getAttribute('data-y')); if (!Number.isFinite(y)) y = top;
+
+  widget.style.left = '0px';
+  widget.style.top  = '0px';
+  widget.style.position = 'absolute';
+  widget.style.transform = `translate(${x}px, ${y}px)`;
+  widget.setAttribute('data-x', x);
+  widget.setAttribute('data-y', y);
+}
+
+/**
+ * Подготвя widget за системите selection / constraints / interactjs.
+ */
+function registerWidget(widget) {
+  if (!widget.id) widget.id = uid('widget');
+  normalizeWidgetPosition(widget);
+  // Възможно място за init на вътрешни дръжки/контроли, ако имаме.
+  // selection се базира на делегирани слушатели, така че не е нужно да вържем нещо тук.
+  // constraints: при първоначално добавяне не пращаме нищо; при drag/resize ще се изпълни applyAround.
+}
+
+// Експонираме като глобален hook за LibraryUI
+window.dp = window.dp || {};
+window.dp.registerWidget = registerWidget;
+
+// При събитие от LibraryUI (dp:create-widget) → нормализираме позицията
+function wireLibraryCreateHook() {
+  const canvas = document.getElementById('canvas');
+  if (!canvas) return;
+  canvas.addEventListener('dp:create-widget', (ev) => {
+    const { widget } = ev.detail || {};
+    if (!widget) return;
+    registerWidget(widget);
+  });
+}
+
+// Нормализираме всички съществуващи widgets от HTML (ако не са)
+function normalizeExistingWidgets() {
+  document.querySelectorAll('.widget').forEach(normalizeWidgetPosition);
+}
+
+// ==============================
 // BOOTSTRAP
 // ==============================
 document.addEventListener('DOMContentLoaded', () => {
@@ -91,7 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Selection
   initSelection();
 
-  // Ribbon mount
+  // Рендер на рибона, после инициализация на constraints UI
   loadComponent('#ribbon-mount', 'components/ribbon.html').then(() => {
     window.Constraints?.init();
   });
@@ -240,4 +301,8 @@ document.addEventListener('DOMContentLoaded', () => {
       ]);
     });
   });
+
+  // === Нови връзки за LibraryUI и стартова нормализация ===
+  wireLibraryCreateHook();
+  normalizeExistingWidgets();
 });
