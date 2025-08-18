@@ -33,10 +33,15 @@ export function initSelection() {
   let marqueeStart = { x: 0, y: 0 };
   let marqueeType = 'normal'; // left-right или right-left
 
-  // Marquee start
+  // ==============================
+  // Marquee start (фикс: ползвай closest('.widget'))
+  // ==============================
   canvas.addEventListener('mousedown', function (e) {
     if (e.button !== 0) return;
-    if (e.target.classList.contains('widget')) return; // клик върху widget не стартира marquee
+
+    // FIX: ако кликът е върху ИЛИ вътре в widget, НЕ стартираме marquee
+    const widgetUnder = e.target.closest('.widget');
+    if (widgetUnder) return;
 
     if (!e.shiftKey && !e.ctrlKey) clearSelection();
 
@@ -101,7 +106,9 @@ export function initSelection() {
     }
   });
 
-  // Клик върху widget
+  // ==============================
+  // Клик върху widget (оставено с closest)
+  // ==============================
   let dragTimer = null, dragStarted = false;
   canvas.addEventListener('mousedown', function (e) {
     const widget = e.target.closest('.widget');
