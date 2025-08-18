@@ -1,5 +1,5 @@
 /*
- DP Configurator — Widget Registry (v0.1)
+ DP Configurator — Widget Registry (v0.2)
  File: js/ui/widget-registry.js
 
  Purpose
@@ -79,7 +79,7 @@
       link.rel = 'stylesheet';
       link.href = abs;
       link.onload = () => { CSS_LOADED.add(abs); res(); };
-      link.onerror = (e) => rej(new Error(`CSS load error: ${abs}`));
+      link.onerror = () => rej(new Error(`CSS load error: ${abs}`));
       HEAD.appendChild(link);
     });
   }
@@ -203,4 +203,23 @@
   };
 
   global.WidgetRegistry = API;
+
+  // ==============================
+  // Default registrations (MVP)
+  // ==============================
+  // If the app doesn't register types elsewhere, we provide a minimal default
+  // so the first widget works out-of-the-box.
+  try {
+    if (!API.getAssets('window-basic')) {
+      API.registerType('window-basic', {
+        html: 'widgets/window-basic/window-basic.html',
+        css:  'widgets/window-basic/window-basic.css',
+        js:   'widgets/window-basic/window-basic.js',
+        title: 'Window'
+      });
+    }
+  } catch (e) {
+    console.warn('WidgetRegistry default registration failed:', e);
+  }
+
 })(window);
