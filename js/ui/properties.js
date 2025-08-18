@@ -1,18 +1,15 @@
 /*
- DP Configurator — Properties Panel (v0.1, MVP)
+ DP Configurator — Properties Panel (v0.12, MVP)
  File: js/ui/properties.js
 
- Scope of v0.1:
+ Scope of v0.12:
  - Right sidebar panel that edits a SINGLE selected widget.
  - Groups implemented: "Идентичност" (ID/Name), "Разположение" (X,Y,W,H,Z-index), "Външен вид" (bg, border, radius, shadow).
  - Two-way sync:
     • When selection changes or geometry changes (drag/resize), inputs update.
     • When inputs change, widget styles update live.
- - No external dependencies; mounts via PropertiesUI.mount({ container: '#properties-panel' })
-
- Notes:
- - Works generically against any .widget, regardless of widget type.
- - Future: read per-widget schema from WidgetRegistry to show additional groups/fields.
+ - Appearance is applied to an inner wrapper if present ('.wb') to avoid
+   clobbering the selection highlight on the outer .widget.
 */
 
 (function (global) {
@@ -195,12 +192,15 @@
       input({ id:'f-shadow-color', type:'color' }, onShadowColor),
       input({ id:'f-shadow-hex', type:'text', class:'hex', placeholder:'#000000' }, onShadowHex),
     ]);
+    sh.classList.add('shadow-row');
 
     wrap.appendChild(bg); wrap.appendChild(bc); wrap.appendChild(rad); wrap.appendChild(sh);
     return wrap;
   }
 
   // ============ Read/Write Widget State ============
+  function appearanceTarget(el){ return el.querySelector('.wb') || el; }
+
   function readWidgetState(el) {
     // geometry
     const x = parseFloat(el.getAttribute('data-x')) || 0;
@@ -211,8 +211,9 @@
     // identity
     const id = el.id || '';
     const name = el.querySelector('.widget-title, .wb-name')?.textContent || el.dataset.name || '';
-    // appearance
-    const cs = getComputedStyle(el);
+    // appearance (read from inner target to preserve selection border)
+    const t = appearanceTarget(el);
+    const cs = getComputedStyle(t);
     const bg = rgbToHex(cs.backgroundColor);
     const borderColor = rgbToHex(cs.borderColor);
     const borderWidth = parseInt(cs.borderWidth || '0', 10);
@@ -270,14 +271,14 @@
   // ============ Handlers: Appearance ============
   function onBGColor(e){ syncColorPair('#f-bg-color','#f-bg-hex', e.target.value); applyBG(); }
   function onBGHex(e){ const v = toHex(e.target.value); syncColorPair('#f-bg-color','#f-bg-hex', v); applyBG(); }
-  function applyBG(){ if (!S.selected) return; S.selected.style.background = getValue('#f-bg-hex'); }
+  function applyBG(){ if (!S.selected) return; const t=appearanceTarget(S.selected); t.style.background = getValue('#f-bg-hex'); }
 
   function onBorderColor(e){ syncColorPair('#f-border-color','#f-border-hex', e.target.value); applyBorder(); }
   function onBorderHex(e){ const v = toHex(e.target.value); syncColorPair('#f-border-color','#f-border-hex', v); applyBorder(); }
   function onBorderWidth(){ applyBorder(); }
-  function applyBorder(){ if (!S.selected) return; const c=getValue('#f-border-hex'); const w=toNum(getValue('#f-border-width'),0); S.selected.style.border = `${Math.max(0,w)}px solid ${c}`; }
+  function applyBorder(){ if (!S.selected) return; const t=appearanceTarget(S.selected); const c=getValue('#f-border-hex'); const w=toNum(getValue('#f-border-width'),0); t.style.borderColor = c; t.style.borderStyle = 'solid'; t.style.borderWidth = Math.max(0,w) + 'px'; }
 
-  function onRadius(){ if (!S.selected) return; const r = Math.max(0, toNum(getValue('#f-radius'),0)); S.selected.style.borderRadius = r + 'px'; }
+  function onRadius(){ if (!S.selected) return; const t=appearanceTarget(S.selected); const r = Math.max(0, toNum(getValue('#f-radius'),0)); t.style.borderRadius = r + 'px'; }
 
   function onShadowToggle(){ applyShadow(); }
   function onShadow(){ applyShadow(); }
@@ -285,14 +286,15 @@
   function onShadowHex(e){ const v = toHex(e.target.value); syncColorPair('#f-shadow-color','#f-shadow-hex', v); applyShadow(); }
   function applyShadow(){
     if (!S.selected) return;
+    const t = appearanceTarget(S.selected);
     const enable = !!getValue('#f-shadow-enable');
-    if (!enable) { S.selected.style.boxShadow = 'none'; return; }
+    if (!enable) { t.style.boxShadow = 'none'; return; }
     const dx = toNum(getValue('#f-shadow-x'),0);
     const dy = toNum(getValue('#f-shadow-y'),6);
     const blur = Math.max(0,toNum(getValue('#f-shadow-blur'),12));
     const spread = toNum(getValue('#f-shadow-spread'),0);
     const color = getValue('#f-shadow-hex') || '#000000';
-    S.selected.style.boxShadow = `${dx}px ${dy}px ${blur}px ${spread}px ${color}`;
+    t.style.boxShadow = `${dx}px ${dy}px ${blur}px ${spread}px ${color}`;
   }
 
   function syncColorPair(colorSel, hexSel, v) {
