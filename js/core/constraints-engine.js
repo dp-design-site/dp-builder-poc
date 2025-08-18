@@ -40,8 +40,8 @@ export function createConstraint(aEl, aAnchor, bEl, bAnchor){
   const c = { id: uid(), axis, a: {id:aEl.id, anchor:aAnchor}, b:{id:bEl.id, anchor:bAnchor} };
   store.list.set(c.id, c);
   addIndex(c.a.id, c.id); addIndex(c.b.id, c.id);
-  // начално прилагане – придвижваме B към A
-  applyConstraint(c, c.a.id);
+  // начално прилагане – придвижваме A към B (B е таргетът)
+  applyConstraint(c, c.b.id);
   return c.id;
 }
 
@@ -67,15 +67,17 @@ function applyConstraint(c, draggedId){
   const bv = anchorValue(br, c.b.anchor);
 
   if (draggedId === c.a.id){
-    if (c.axis === 'x') setPos(bEl, getXY(bEl).x + (av - bv), getXY(bEl).y);
-    else                setPos(bEl, getXY(bEl).x, getXY(bEl).y + (av - bv));
+    // местим A към B (B е таргет)
+    if (c.axis === 'x') setPos(aEl, getXY(aEl).x + (bv - av), getXY(aEl).y);
+    else                setPos(aEl, getXY(aEl).x, getXY(aEl).y + (bv - av));
   } else if (draggedId === c.b.id){
+    // местим A към B пак (B е референция)
     if (c.axis === 'x') setPos(aEl, getXY(aEl).x + (bv - av), getXY(aEl).y);
     else                setPos(aEl, getXY(aEl).x, getXY(aEl).y + (bv - av));
   } else {
-    // по подразбиране местим B към A
-    if (c.axis === 'x') setPos(bEl, getXY(bEl).x + (av - bv), getXY(bEl).y);
-    else                setPos(bEl, getXY(bEl).x, getXY(bEl).y + (av - bv));
+    // по подразбиране местим A към B
+    if (c.axis === 'x') setPos(aEl, getXY(aEl).x + (bv - av), getXY(aEl).y);
+    else                setPos(aEl, getXY(aEl).x, getXY(aEl).y + (bv - av));
   }
 }
 
@@ -98,7 +100,7 @@ export function applyAround(elId, maxDepth = 8){
     depth++;
   }
 }
-
+ 
 // Глобално прилагане – полезно след import()
 export function applyConstraints(){
   let changed; let iterations = 0;
@@ -112,9 +114,9 @@ export function applyConstraints(){
       const av = anchorValue(ar, c.a.anchor);
       const bv = anchorValue(br, c.b.anchor);
       if (c.axis === 'x'){
-        const dx = av - bv; if (Math.abs(dx) > 0.5){ setPos(bEl, getXY(bEl).x + dx, getXY(bEl).y); changed = true; }
+        const dx = av - bv; if (Math.abs(dx) > 0.5){ setPos(aEl, getXY(aEl).x - dx, getXY(aEl).y); changed = true; }
       } else {
-        const dy = av - bv; if (Math.abs(dy) > 0.5){ setPos(bEl, getXY(bEl).x, getXY(bEl).y + dy); changed = true; }
+        const dy = av - bv; if (Math.abs(dy) > 0.5){ setPos(aEl, getXY(aEl).x, getXY(aEl).y - dy); changed = true; }
       }
     }
   } while (changed && iterations < 10);
