@@ -1,23 +1,18 @@
 /*
- DP Configurator — Properties Panel (v0.1, MVP)
+ DP Configurator — Properties Panel (v0.13, layout tweaks)
  File: js/ui/properties.js
 
- Scope of v0.1:
+ Scope of v0.13:
  - Right sidebar panel that edits a SINGLE selected widget.
  - Groups implemented: "Идентичност" (ID/Name), "Разположение" (X,Y,W,H,Z-index), "Външен вид" (bg, border, radius, shadow).
  - Two-way sync:
     • When selection changes or geometry changes (drag/resize), inputs update.
     • When inputs change, widget styles update live.
- - No external dependencies; mounts via PropertiesUI.mount({ container: '#properties-panel' })
-
- Notes:
- - Works generically against any .widget, regardless of widget type.
- - Future: read per-widget schema from WidgetRegistry to show additional groups/fields.
- - Fixes:
-    • Panel starts below ribbon, fixed to right, with own scroll.
-    • Z-index controls placed inside Разположение group.
-    • Shadow controls fully inside Външен вид.
-    • Border color change preserves selection highlight.
+ - Appearance is applied to an inner wrapper if present ('.wb') to avoid
+   clobbering the selection highlight on the outer .widget.
+ - Layout improvements:
+    • Coordinates arranged in two rows (X/Y then W/H).
+    • Color fields arranged side-by-side with HEX inputs.
 */
 
 (function (global) {
@@ -39,13 +34,6 @@
     root.appendChild(sectionLayout());
     root.appendChild(sectionAppearance());
     S.container.appendChild(root);
-
-    // Fix: make container scrollable
-    S.container.style.overflowY = 'auto';
-    S.container.style.position = 'fixed';
-    S.container.style.top = document.querySelector('#ribbon')?.offsetHeight + 'px' || '40px';
-    S.container.style.right = '0';
-    S.container.style.bottom = '0';
 
     // Selection tracking: update on clicks + class/attr mutations
     const canvas = document.getElementById('canvas');
@@ -82,13 +70,16 @@
 
   function paintFromSelected() {
     const state = S.selected ? readWidgetState(S.selected) : null;
+    // identity
     setValue('#f-id', state?.id || '—');
     setValue('#f-name', state?.name || '');
+    // layout
     setValue('#f-x', num(state?.x));
     setValue('#f-y', num(state?.y));
     setValue('#f-w', num(state?.width));
     setValue('#f-h', num(state?.height));
     setValue('#f-z', state?.zIndex ?? 0);
+    // appearance
     setColor('#f-bg-color', '#f-bg-hex', state?.bg || '#1a1a1a');
     setColor('#f-border-color', '#f-border-hex', state?.borderColor || '#555555');
     setValue('#f-border-width', num(state?.borderWidth ?? 1));
@@ -99,6 +90,7 @@
     setValue('#f-shadow-blur', num(state?.shadow?.blur ?? 12));
     setValue('#f-shadow-spread', num(state?.shadow?.spread ?? 0));
     setColor('#f-shadow-color', '#f-shadow-hex', state?.shadow?.color || '#000000');
+
     setDisabledGroup(!S.selected);
   }
 
@@ -135,71 +127,6 @@
     }
     if (/^[0-9a-fA-F]{6}$/.test(v)) return `#${v}`;
     return '#000000';
-  }
-
-  // Section builders
-  function sectionIdentity() {
-    const wrap = section('Идентичност', 'identity');
-    wrap.appendChild(row([ label('ID'), input({ id:'f-id', type:'text', readonly:true }) ]));
-    wrap.appendChild(row([ label('Име'), input({ id:'f-name', type:'text', placeholder:'Name' }, onNameChange) ]));
-    return wrap;
-  }
-
-  function sectionLayout() {
-    const wrap = section('Разположение', 'layout');
-    const g1 = row([
-      label('X'), input({ id:'f-x', type:'number', step:'1' }, onGeometryInput),
-      label('Y'), input({ id:'f-y', type:'number', step:'1' }, onGeometryInput),
-    ]);
-    const g2 = row([
-      label('W'), input({ id:'f-w', type:'number', min:'20', step:'1' }, onGeometryInput),
-      label('H'), input({ id:'f-h', type:'number', min:'20', step:'1' }, onGeometryInput),
-    ]);
-
-    const z = row([
-      label('Z'), input({ id:'f-z', type:'number', step:'1' }, onZIndexInput),
-      btn('⤒', 'Най-отгоре', onBringToFront),
-      btn('⌃', 'Едно нагоре', onMoveUp),
-      btn('⌄', 'Едно надолу', onMoveDown),
-      btn('⤓', 'Най-отдолу', onSendToBack),
-    ]);
-
-    wrap.appendChild(g1); wrap.appendChild(g2); wrap.appendChild(z);
-    return wrap;
-  }
-
-  function sectionAppearance() {
-    const wrap = section('Външен вид', 'appearance');
-
-    const bg = row([
-      label('Background'),
-      input({ id:'f-bg-color', type:'color' }, onBGColor),
-      input({ id:'f-bg-hex', type:'text', class:'hex', placeholder:'#RRGGBB' }, onBGHex),
-    ]);
-
-    const bc = row([
-      label('Border'),
-      input({ id:'f-border-color', type:'color' }, onBorderColor),
-      input({ id:'f-border-hex', type:'text', class:'hex', placeholder:'#RRGGBB' }, onBorderHex),
-      input({ id:'f-border-width', type:'number', min:'0', step:'1', title:'Width (px)' }, onBorderWidth),
-    ]);
-
-    const rad = row([
-      label('Radius'), input({ id:'f-radius', type:'number', min:'0', step:'1' }, onRadius),
-    ]);
-
-    const sh = row([
-      input({ id:'f-shadow-enable', type:'checkbox' }, onShadowToggle), label('Shadow'),
-      input({ id:'f-shadow-x', type:'number', step:'1', title:'dx' }, onShadow),
-      input({ id:'f-shadow-y', type:'number', step:'1', title:'dy' }, onShadow),
-      input({ id:'f-shadow-blur', type:'number', min:'0', step:'1', title:'blur' }, onShadow),
-      input({ id:'f-shadow-spread', type:'number', step:'1', title:'spread' }, onShadow),
-      input({ id:'f-shadow-color', type:'color' }, onShadowColor),
-      input({ id:'f-shadow-hex', type:'text', class:'hex', placeholder:'#000000' }, onShadowHex),
-    ]);
-
-    wrap.appendChild(bg); wrap.appendChild(bc); wrap.appendChild(rad); wrap.appendChild(sh);
-    return wrap;
   }
    // ============ Sections ============
   function sectionIdentity() {
