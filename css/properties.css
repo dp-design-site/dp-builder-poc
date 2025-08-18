@@ -1,5 +1,5 @@
 /*
- DP Configurator — Properties Panel Styles (v0.11)
+ DP Configurator — Properties Panel Styles (v0.12)
  File: css/properties.css
 */
 
@@ -71,8 +71,14 @@
 .prop-body { padding: 10px; display: flex; flex-direction: column; gap: 10px; }
 
 /* Rows keep everything on one line within the card */
-.prop-row { display: grid; grid-template-columns: 90px 1fr 1fr 1fr 1fr 1fr; gap: 8px; align-items: center; min-width: 0; }
+.prop-row { display: grid; gap: 8px; align-items: center; min-width: 0; }
 .prop-row > * { min-width: 0; }
+
+/* Layout variants for different row types */
+.prop-row.row-2 { grid-template-columns: 100px 1fr; }
+.prop-row.row-4 { grid-template-columns: 60px 1fr 60px 1fr; }
+.prop-row.row-color { grid-template-columns: 100px 44px 120px; }
+.shadow-row { grid-template-columns: 24px 64px repeat(4, 1fr) 44px 120px; gap: 6px; }
 
 .prop-label { font-size: 12px; color: var(--dp-text-dim,#b6beca); }
 
@@ -91,7 +97,7 @@
 .prop-row input[type="color"] { padding: 0; }
 .prop-row input[readonly] { opacity: .7; }
 
-.prop-row .hex { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+.prop-row .hex { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; width: 120px; }
 
 /* Z-index line buttons (fit within the card) */
 .zline { display: grid; grid-template-columns: 24px 1fr repeat(4, 32px); gap: 8px; align-items: center; }
