@@ -149,3 +149,23 @@ export function importConstraints(json){
     applyConstraints();
   } catch(e){ console.warn('[constraints-engine] import error', e); }
 }
+
+// === Helper: дали два елемента са свързани чрез констрайнти (директно или косвено) ===
+export function areConnected(elIdA, elIdB, maxDepth=20){
+  if (elIdA===elIdB) return true;
+  const visited=new Set();
+  const q=[elIdA];
+  while(q.length && maxDepth-->0){
+    const cur=q.shift();
+    if(cur===elIdB) return true;
+    if(visited.has(cur)) continue;
+    visited.add(cur);
+    const ids=Array.from(store.byEl.get(cur)||[]);
+    for(const cid of ids){
+      const c=store.list.get(cid); if(!c) continue;
+      const other=(c.a.id===cur)?c.b.id:c.a.id;
+      if(!visited.has(other)) q.push(other);
+    }
+  }
+  return false;
+}
