@@ -1,24 +1,23 @@
 /*
- DP Configurator — Properties Panel (v0.15)
+ DP Configurator — Properties Panel (v0.16)
  File: js/ui/properties.js
 
- Additions in v0.15:
- - New sections: "Заглавие" (Label) and "Хедър" (Header).
- - Controls:
-   • Label: text color (palette+HEX), font-size (px), italic toggle.
-   • Header: show/hide, header background (palette+HEX), header text color (palette+HEX),
-             font-size (px), italic toggle. Name is reused as title text.
- - Styling is applied to inner nodes (.wb, .wb-header, .wb-title, .wb-name) so selection visuals remain intact.
+ Additions up to v0.16:
+ - Sections: "Идентичност", "Разположение", "Външен вид", "Заглавие", "Хедър".
+ - Full two-way sync for: geometry, background, border, radius, shadow,
+   title (color/size/italic), header (toggle/bg/text color/size/italic).
+ - Styling targets inner nodes (.wb, .wb-header, .wb-title, .wb-name) to keep selection
+   outline unaffected.
 */
 
 (function (global) {
   const S = {
     container: null,
-    els: {},
-    selected: null, // HTMLElement of selected widget (single)
-    obs: null,      // MutationObserver for live sync
+    selected: null,
+    obs: null,
   };
 
+  // ==================== Public API ====================
   function mount({ container }) {
     S.container = resolveEl(container);
     if (!S.container) throw new Error('PropertiesUI.mount: container not found');
@@ -33,20 +32,21 @@
     root.appendChild(sectionHeader());
     S.container.appendChild(root);
 
-    // Selection tracking: update on clicks + class/attr mutations
     const canvas = document.getElementById('canvas');
     canvas?.addEventListener('click', defer(refreshSelection));
 
-    // Observe .widget class and attribute changes for live reflect
     S.obs = new MutationObserver(onMutations);
     if (canvas) {
       S.obs.observe(canvas, { subtree: true, attributes: true, attributeFilter: ['class','style','data-x','data-y'] });
     }
 
-    // Initial paint
     refreshSelection();
   }
 
+  const API = { mount };
+  global.PropertiesUI = API;
+
+  // ==================== Selection Sync ====================
   function resolveEl(ref) { return typeof ref === 'string' ? document.querySelector(ref) : ref; }
   const defer = (fn) => () => requestAnimationFrame(fn);
 
@@ -68,15 +68,18 @@
 
   function paintFromSelected() {
     const state = S.selected ? readWidgetState(S.selected) : null;
+
     // identity
     setValue('#f-id', state?.id || '—');
     setValue('#f-name', state?.name || '');
+
     // layout
     setValue('#f-x', num(state?.x));
     setValue('#f-y', num(state?.y));
     setValue('#f-w', num(state?.width));
     setValue('#f-h', num(state?.height));
     setValue('#f-z', state?.zIndex ?? 0);
+
     // appearance
     setColor('#f-bg-color', '#f-bg-hex', state?.bg || '#1a1a1a');
     setColor('#f-border-color', '#f-border-hex', state?.borderColor || '#555555');
@@ -89,7 +92,7 @@
     setValue('#f-shadow-spread', num(state?.shadow?.spread ?? 0));
     setColor('#f-shadow-color', '#f-shadow-hex', state?.shadow?.color || '#000000');
 
-    // label
+    // title (label)
     setColor('#f-title-color', '#f-title-hex', state?.title?.color || '#E6EAF0');
     setValue('#f-title-size', num(state?.title?.size ?? 14));
     setValue('#f-title-italic', !!state?.title?.italic);
@@ -104,174 +107,13 @@
     setDisabledGroup(!S.selected);
   }
 
-  function num(v) { return (v === undefined || v === null || Number.isNaN(v)) ? '' : v; }
-
-  function setValue(sel, v) {
-    const node = S.container.querySelector(sel);
-    if (!node) return;
-    if (node.type === 'checkbox') node.checked = !!v;
-    else node.value = v ?? '';
+  function setDisabledGroup(disabled){
+    S.container.querySelectorAll('.prop-section .prop-body input, .prop-section .prop-body button').forEach(el=>{ el.disabled = !!disabled; });
   }
 
-  function getValue(sel) {
-    const node = S.container.querySelector(sel);
-    if (!node) return undefined;
-    if (node.type === 'checkbox') return !!node.checked;
-    return node.value;
-  }
-
-  function setColor(colorSel, hexSel, v) {
-    const color = S.container.querySelector(colorSel);
-    const hex = S.container.querySelector(hexSel);
-    const val = toHex(v || '#000000');
-    if (color) color.value = val;
-    if (hex) hex.value = val.toUpperCase();
-  }
-
-  function toHex(v) {
-    if (!v) return '#000000';
-    if (/^#[0-9a-fA-F]{6}$/.test(v)) return v;
-    if (/^#[0-9a-fA-F]{3}$/.test(v)) {
-      const r=v[1],g=v[2],b=v[3];
-      return `#${r}${r}${g}${g}${b}${b}`;
-    }
-    if (/^[0-9a-fA-F]{6}$/.test(v)) return `#${v}`;
-    return '#000000';
-  }
-
-  // ============ Sections ============
-  function sectionIdentity() {
-    const wrap = section('Идентичност', 'identity');
-    const r1 = row([ label('ID'), input({ id:'f-id', type:'text', readonly:true }) ]);
-    r1.classList.add('row-2');
-    const r2 = row([ label('Име'), input({ id:'f-name', type:'text', placeholder:'Name' }, onNameChange) ]);
-    r2.classList.add('row-2');
-    wrap.appendChild(r1);
-    wrap.appendChild(r2);
-    return wrap;
-  }
-
-  function sectionLayout() {
-    const wrap = section('Разположение', 'layout');
-    const g1 = row([
-      label('X'), input({ id:'f-x', type:'number', step:'1', placeholder:'X' }, onGeometryInput),
-      label('Y'), input({ id:'f-y', type:'number', step:'1', placeholder:'Y' }, onGeometryInput),
-    ]);
-    g1.classList.add('row-4');
-    const g2 = row([
-      label('W'), input({ id:'f-w', type:'number', min:'20', step:'1', placeholder:'W' }, onGeometryInput),
-      label('H'), input({ id:'f-h', type:'number', min:'20', step:'1', placeholder:'H' }, onGeometryInput),
-    ]);
-    g2.classList.add('row-4');
-
-    const z = el('div', { class:'zline' }, [
-      label('Z'), input({ id:'f-z', type:'number', step:'1' }, onZIndexInput),
-      btn('⤒', 'Най-отгоре', onBringToFront),
-      btn('⌃', 'Едно нагоре', onMoveUp),
-      btn('⌄', 'Едно надолу', onMoveDown),
-      btn('⤓', 'Най-отдолу', onSendToBack),
-    ]);
-
-    wrap.appendChild(g1); wrap.appendChild(g2); wrap.appendChild(z);
-    return wrap;
-  }
-
-  function sectionAppearance() {
-    const wrap = section('Външен вид', 'appearance');
-
-    // Background
-    const bg = row([
-      label('Background'),
-      input({ id:'f-bg-color', type:'color' }, onBGColor),
-      input({ id:'f-bg-hex', type:'text', class:'hex', placeholder:'#RRGGBB' }, onBGHex),
-    ]);
-    bg.classList.add('row-color');
-
-    // Border
-    const bc = row([
-      label('Border'),
-      input({ id:'f-border-color', type:'color' }, onBorderColor),
-      input({ id:'f-border-hex', type:'text', class:'hex', placeholder:'#RRGGBB' }, onBorderHex),
-      input({ id:'f-border-width', type:'number', min:'0', step:'1', title:'Width (px)' }, onBorderWidth),
-    ]);
-    bc.classList.add('row-color');
-
-    // Radius
-    const rad = row([
-      label('Radius'), input({ id:'f-radius', type:'number', min:'0', step:'1' }, onRadius),
-    ]);
-    rad.classList.add('row-2');
-
-    // Shadow (basic)
-    const sh = row([
-      input({ id:'f-shadow-enable', type:'checkbox' }, onShadowToggle), label('Shadow'),
-      input({ id:'f-shadow-x', type:'number', step:'1', title:'dx' }, onShadow),
-      input({ id:'f-shadow-y', type:'number', step:'1', title:'dy' }, onShadow),
-      input({ id:'f-shadow-blur', type:'number', min:'0', step:'1', title:'blur' }, onShadow),
-      input({ id:'f-shadow-spread', type:'number', step:'1', title:'spread' }, onShadow),
-      input({ id:'f-shadow-color', type:'color' }, onShadowColor),
-      input({ id:'f-shadow-hex', type:'text', class:'hex', placeholder:'#000000' }, onShadowHex),
-    ]);
-    sh.classList.add('shadow-row');
-
-    wrap.appendChild(bg); wrap.appendChild(bc); wrap.appendChild(rad); wrap.appendChild(sh);
-    return wrap;
-  }
-
-  function sectionLabel(){
-    const wrap = section('Заглавие', 'label');
-    // Title color + hex
-    const lc = row([
-      label('Цвят'),
-      input({ id:'f-title-color', type:'color' }, onTitleColor),
-      input({ id:'f-title-hex', type:'text', class:'hex', placeholder:'#RRGGBB' }, onTitleHex),
-    ]); lc.classList.add('row-color');
-    // Size
-    const ls = row([
-      label('Размер'), input({ id:'f-title-size', type:'number', min:'8', step:'1' }, onTitleSize),
-    ]); ls.classList.add('row-2');
-    // Italic
-    const li = row([
-      label('Italic'), input({ id:'f-title-italic', type:'checkbox' }, onTitleItalic),
-    ]); li.classList.add('row-2');
-
-    wrap.appendChild(lc); wrap.appendChild(ls); wrap.appendChild(li);
-    return wrap;
-  }
-
-  function sectionHeader(){
-    const wrap = section('Хедър', 'header');
-    // Enable
-    const he = row([
-      label('Показвай'), input({ id:'f-header-enable', type:'checkbox' }, onHeaderToggle),
-    ]); he.classList.add('row-2');
-    // Header BG
-    const hb = row([
-      label('Bg'), input({ id:'f-header-bg-color', type:'color' }, onHeaderBGColor),
-      input({ id:'f-header-bg-hex', type:'text', class:'hex', placeholder:'#RRGGBB' }, onHeaderBGHex),
-    ]); hb.classList.add('row-color');
-    // Header Text Color
-    const htc = row([
-      label('Текст'), input({ id:'f-header-text-color', type:'color' }, onHeaderTextColor),
-      input({ id:'f-header-text-hex', type:'text', class:'hex', placeholder:'#RRGGBB' }, onHeaderTextHex),
-    ]); htc.classList.add('row-color');
-    // Header Size
-    const hs = row([
-      label('Размер'), input({ id:'f-header-size', type:'number', min:'8', step:'1' }, onHeaderSize),
-    ]); hs.classList.add('row-2');
-    // Header Italic
-    const hi = row([
-      label('Italic'), input({ id:'f-header-italic', type:'checkbox' }, onHeaderItalic),
-    ]); hi.classList.add('row-2');
-
-    wrap.appendChild(he); wrap.appendChild(hb); wrap.appendChild(htc); wrap.appendChild(hs); wrap.appendChild(hi);
-    return wrap;
-  }
-
-  // ============ Read/Write Widget State ============
+  // ==================== State Read/Write ====================
   function appearanceTarget(el){ return el.querySelector('.wb') || el; }
   function titleNode(el){
-    // Prefer header title; else fall back to .wb-name/.widget-title
     return el.querySelector('.wb .wb-header .wb-title')
         || el.querySelector('.wb .wb-name')
         || el.querySelector('.widget-title')
@@ -291,7 +133,6 @@
     h.classList.add('wb-header');
     const t = title || document.createElement('div');
     t.classList.add('wb-title');
-    // seed text from name
     const nameEl = el.querySelector('.widget-title, .wb-name');
     t.textContent = nameEl?.textContent || el.dataset.name || 'Title';
     if (!h.contains(t)) h.appendChild(t);
@@ -349,17 +190,17 @@
     if (height != null) el.style.height = Math.max(20, height) + 'px';
   }
 
-  // ============ Handlers: Identity ============
+  // ==================== Identity Handlers ====================
   function onNameChange(e) {
     if (!S.selected) return;
     const v = e.target.value || '';
     const nameEl = S.selected.querySelector('.widget-title, .wb-name');
     if (nameEl) nameEl.textContent = v;
-    const { header, title } = headerElems(S.selected);
+    const { title } = headerElems(S.selected);
     if (title) title.textContent = v;
   }
 
-  // ============ Handlers: Layout ============
+  // ==================== Layout Handlers ====================
   function onGeometryInput() {
     if (!S.selected) return;
     const x = toNum(getValue('#f-x'));
@@ -386,4 +227,148 @@
   function onMoveUp(){ if (!S.selected) return; const zi=parseInt(S.selected.style.zIndex||'0',10); S.selected.style.zIndex=String(zi+1); paintFromSelected(); }
   function onMoveDown(){ if (!S.selected) return; const zi=parseInt(S.selected.style.zIndex||'0',10); S.selected.style.zIndex=String(zi-1); paintFromSelected(); }
 
-  // ============ Handlers: Appearance ============
+  // ==================== Appearance Handlers ====================
+  function onBGColor(e){ syncColorPair('#f-bg-color','#f-bg-hex', e.target.value); applyBG(); }
+  function onBGHex(e){ const v = toHex(e.target.value); syncColorPair('#f-bg-color','#f-bg-hex', v); applyBG(); }
+  function applyBG(){ if (!S.selected) return; const t=appearanceTarget(S.selected); t.style.background = getValue('#f-bg-hex'); }
+
+  function onBorderColor(e){ syncColorPair('#f-border-color','#f-border-hex', e.target.value); applyBorder(); }
+  function onBorderHex(e){ const v = toHex(e.target.value); syncColorPair('#f-border-color','#f-border-hex', v); applyBorder(); }
+  function onBorderWidth(){ applyBorder(); }
+  function applyBorder(){ if (!S.selected) return; const t=appearanceTarget(S.selected); const c=getValue('#f-border-hex'); const w=toNum(getValue('#f-border-width'),0); t.style.borderColor = c; t.style.borderStyle = 'solid'; t.style.borderWidth = Math.max(0,w) + 'px'; }
+
+  function onRadius(){ if (!S.selected) return; const t=appearanceTarget(S.selected); const r = Math.max(0, toNum(getValue('#f-radius'),0)); t.style.borderRadius = r + 'px'; }
+
+  function onShadowToggle(){ applyShadow(); }
+  function onShadow(){ applyShadow(); }
+  function onShadowColor(e){ syncColorPair('#f-shadow-color','#f-shadow-hex', e.target.value); applyShadow(); }
+  function onShadowHex(e){ const v = toHex(e.target.value); syncColorPair('#f-shadow-color','#f-shadow-hex', v); applyShadow(); }
+  function applyShadow(){
+    if (!S.selected) return;
+    const t = appearanceTarget(S.selected);
+    const enable = !!getValue('#f-shadow-enable');
+    if (!enable) { t.style.boxShadow = 'none'; return; }
+    const dx = toNum(getValue('#f-shadow-x'),0);
+    const dy = toNum(getValue('#f-shadow-y'),6);
+    const blur = Math.max(0,toNum(getValue('#f-shadow-blur'),12));
+    const spread = toNum(getValue('#f-shadow-spread'),0);
+    const color = getValue('#f-shadow-hex') || '#000000';
+    t.style.boxShadow = `${dx}px ${dy}px ${blur}px ${spread}px ${color}`;
+  }
+
+  // ==================== Label Handlers ====================
+  function onTitleColor(e){ syncColorPair('#f-title-color','#f-title-hex', e.target.value); applyTitleStyle(); }
+  function onTitleHex(e){ const v = toHex(e.target.value); syncColorPair('#f-title-color','#f-title-hex', v); applyTitleStyle(); }
+  function onTitleSize(){ applyTitleStyle(); }
+  function onTitleItalic(){ applyTitleStyle(); }
+  function applyTitleStyle(){
+    if (!S.selected) return;
+    const tn = titleNode(S.selected);
+    if (!tn) return;
+    tn.style.color = getValue('#f-title-hex') || '';
+    const fs = toNum(getValue('#f-title-size'));
+    if (fs) tn.style.fontSize = fs + 'px';
+    tn.style.fontStyle = getValue('#f-title-italic') ? 'italic' : 'normal';
+  }
+
+  // ==================== Header Handlers ====================
+  function onHeaderToggle(){
+    if (!S.selected) return;
+    const enable = !!getValue('#f-header-enable');
+    if (enable) {
+      const {header} = ensureHeader(S.selected);
+      header.style.display='';
+    } else {
+      const {header} = headerElems(S.selected);
+      if (header) header.style.display='none';
+    }
+  }
+  function onHeaderBGColor(e){ syncColorPair('#f-header-bg-color','#f-header-bg-hex', e.target.value); applyHeaderBG(); }
+  function onHeaderBGHex(e){ const v=toHex(e.target.value); syncColorPair('#f-header-bg-color','#f-header-bg-hex', v); applyHeaderBG(); }
+  function applyHeaderBG(){ if (!S.selected) return; const {header}=ensureHeader(S.selected); header.style.background = getValue('#f-header-bg-hex'); }
+
+  function onHeaderTextColor(e){ syncColorPair('#f-header-text-color','#f-header-text-hex', e.target.value); applyHeaderText(); }
+  function onHeaderTextHex(e){ const v=toHex(e.target.value); syncColorPair('#f-header-text-color','#f-header-text-hex', v); applyHeaderText(); }
+  function onHeaderSize(){ applyHeaderText(); }
+  function onHeaderItalic(){ applyHeaderText(); }
+  function applyHeaderText(){
+    if (!S.selected) return;
+    const { title } = ensureHeader(S.selected);
+    title.style.color = getValue('#f-header-text-hex') || '';
+    const fs = toNum(getValue('#f-header-size'));
+    if (fs) title.style.fontSize = fs + 'px';
+    title.style.fontStyle = getValue('#f-header-italic') ? 'italic' : 'normal';
+  }
+
+  // ==================== Sections Builders ====================
+  function section(title, key) {
+    const sec = el('section', { class: 'prop-section', 'data-key': key });
+    const header = el('header', { class: 'prop-header', tabindex:'0' }, [ el('span', { class:'prop-title', text: title }), toggleBtn() ]);
+    const body = el('div', { class: 'prop-body' });
+
+    // mount header/body using native appendChild
+    sec.appendChild(header);
+    sec.appendChild(body);
+
+    // Shadow native appendChild for this instance so callers can do wrap.appendChild(x)
+    const nativeAppend = sec.appendChild.bind(sec);
+    sec.appendChild = function (child) { body.appendChild(child); return sec; };
+
+    header.querySelector('.prop-toggle').addEventListener('click', () => sec.classList.toggle('collapsed'));
+    header.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' ') { e.preventDefault(); sec.classList.toggle('collapsed'); }});
+    return sec;
+  }
+
+  function row(children) { return el('div', { class:'prop-row' }, children); }
+  function label(text){ return el('label', { class:'prop-label', text }); }
+  function input(attrs, on){ const i = el('input', attrs); if (on) i.addEventListener('input', on); return i; }
+  function btn(text, title, on){ const b = el('button', { class:'prop-btn', title }, [ document.createTextNode(text) ]); if (on) b.addEventListener('click', on); return b; }
+  function toggleBtn(){ const b = el('button', { class:'prop-toggle', title:'Покажи/Скрий' }); b.appendChild(svgChevron()); return b; }
+
+  function el(tag, attrs, children){
+    const n=document.createElement(tag);
+    if(attrs){ for(const[k,v] of Object.entries(attrs)){
+      if(k==='class') n.className=v;
+      else if(k==='text') n.textContent=v;
+      else n.setAttribute(k,v);
+    }}
+    if(children){ for(const c of children) n.appendChild(c);} 
+    return n;
+  }
+
+  function svgChevron(){ const svg=document.createElementNS('http://www.w3.org/2000/svg','svg'); svg.setAttribute('viewBox','0 0 24 24'); svg.setAttribute('width','16'); svg.setAttribute('height','16'); const p=document.createElementNS('http://www.w3.org/2000/svg','path'); p.setAttribute('d','M8.12 9.29L12 13.17l3.88-3.88 1.41 1.41L12 16l-5.29-5.29 1.41-1.42z'); p.setAttribute('fill','currentColor'); svg.appendChild(p); return svg; }
+
+  // ==================== Utils ====================
+  function syncColorPair(colorSel, hexSel, v) {
+    const val = toHex(v);
+    const color = S.container.querySelector(colorSel);
+    const hex = S.container.querySelector(hexSel);
+    if (color) color.value = val;
+    if (hex) hex.value = val.toUpperCase();
+  }
+  function toNum(v, def='') { const n = parseFloat(v); return Number.isFinite(n) ? n : def; }
+  function dispatch(name, detail) { document.dispatchEvent(new CustomEvent(name, { detail })); }
+
+  // ==================== CSS helpers ====================
+  function rgbToHex(rgb) {
+    if (!rgb) return '#000000';
+    if (rgb.startsWith('#')) return toHex(rgb);
+    const m = rgb.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+    if (!m) return '#000000';
+    const r = Number(m[1]).toString(16).padStart(2,'0');
+    const g = Number(m[2]).toString(16).padStart(2,'0');
+    const b = Number(m[3]).toString(16).padStart(2,'0');
+    return `#${r}${g}${b}`.toUpperCase();
+  }
+
+  function parseBoxShadow(bs) {
+    if (!bs || bs === 'none') return { enabled:false };
+    // naive parse: dx dy blur [spread] color
+    const parts = bs.trim().split(/\s+/);
+    const nums = parts.filter(p=>/^-?\d+px$/.test(p)).map(p=>parseInt(p));
+    const color = parts.find(p=>p.startsWith('rgb') || p.startsWith('#')) || '#000000';
+    const [x=0,y=6,blur=12,spread=0] = nums;
+    return { enabled:true, x, y, blur, spread, color: rgbToHex(color) };
+  }
+
+})(window);
