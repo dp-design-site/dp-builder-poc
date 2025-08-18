@@ -18,7 +18,7 @@
   <!-- Minimal layout helper for sidebar + canvas; keep lightweight to avoid conflicts -->
   <style>
     html, body { height: 100%; margin: 0; }
-    body { display: flex; flex-direction: column; }
+    body { display: flex; flex-direction: column; overflow: hidden; }
     #workspace { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: auto 1fr; }
     /* Left panel width is controlled inside css/library.css via #library-panel */
     #main-stage { position: relative; display: flex; flex-direction: column; min-width: 0; }
@@ -39,9 +39,7 @@
     <!-- Main Stage -->
     <section id="main-stage">
       <div id="canvas" aria-label="Работно платно">
-        <!-- Existing demo widgets -->
-        <div class="widget" id="panel1" data-x="180" data-y="120" style="width:320px;height:140px;">Simple Panel 1</div>
-        <div class="widget" id="panel2" data-x="600" data-y="280" style="width:320px;height:140px;">Simple Panel 2</div>
+        <!-- Clean canvas: start empty; new widgets will be dropped here -->
         <div id="guide-v"></div>
         <div id="guide-h"></div>
         <div id="marquee" style="display:none;position:absolute;border:2px dashed #3ea6ff;background:rgba(62,166,255,0.08);z-index:9999;"></div>
@@ -79,6 +77,9 @@
   <!-- Core loader and app -->
   <script src="js/core/component-loader.js"></script>
   <script type="module" src="js/app.js"></script>
+
+  <!-- Widget Registry (must be before Library to auto-enhance on drop) -->
+  <script src="js/ui/widget-registry.js"></script>
 
   <!-- Library panel module -->
   <script src="js/ui/library.js"></script>
