@@ -131,21 +131,27 @@
    // ============ Sections ============
   function sectionIdentity() {
     const wrap = section('Идентичност', 'identity');
-    wrap.appendChild(row([ label('ID'), input({ id:'f-id', type:'text', readonly:true }) ]));
-    wrap.appendChild(row([ label('Име'), input({ id:'f-name', type:'text', placeholder:'Name' }, onNameChange) ]));
+    const r1 = row([ label('ID'), input({ id:'f-id', type:'text', readonly:true }) ]);
+    r1.classList.add('row-2');
+    const r2 = row([ label('Име'), input({ id:'f-name', type:'text', placeholder:'Name' }, onNameChange) ]);
+    r2.classList.add('row-2');
+    wrap.appendChild(r1);
+    wrap.appendChild(r2);
     return wrap;
   }
 
   function sectionLayout() {
     const wrap = section('Разположение', 'layout');
     const g1 = row([
-      label('X'), input({ id:'f-x', type:'number', step:'1' }, onGeometryInput),
-      label('Y'), input({ id:'f-y', type:'number', step:'1' }, onGeometryInput),
+      label('X'), input({ id:'f-x', type:'number', step:'1', placeholder:'X' }, onGeometryInput),
+      label('Y'), input({ id:'f-y', type:'number', step:'1', placeholder:'Y' }, onGeometryInput),
     ]);
+    g1.classList.add('row-4');
     const g2 = row([
-      label('W'), input({ id:'f-w', type:'number', min:'20', step:'1' }, onGeometryInput),
-      label('H'), input({ id:'f-h', type:'number', min:'20', step:'1' }, onGeometryInput),
+      label('W'), input({ id:'f-w', type:'number', min:'20', step:'1', placeholder:'W' }, onGeometryInput),
+      label('H'), input({ id:'f-h', type:'number', min:'20', step:'1', placeholder:'H' }, onGeometryInput),
     ]);
+    g2.classList.add('row-4');
 
     const z = el('div', { class:'zline' }, [
       label('Z'), input({ id:'f-z', type:'number', step:'1' }, onZIndexInput),
@@ -168,6 +174,7 @@
       input({ id:'f-bg-color', type:'color' }, onBGColor),
       input({ id:'f-bg-hex', type:'text', class:'hex', placeholder:'#RRGGBB' }, onBGHex),
     ]);
+    bg.classList.add('row-color');
 
     // Border
     const bc = row([
@@ -176,11 +183,13 @@
       input({ id:'f-border-hex', type:'text', class:'hex', placeholder:'#RRGGBB' }, onBorderHex),
       input({ id:'f-border-width', type:'number', min:'0', step:'1', title:'Width (px)' }, onBorderWidth),
     ]);
+    bc.classList.add('row-color');
 
     // Radius
     const rad = row([
       label('Radius'), input({ id:'f-radius', type:'number', min:'0', step:'1' }, onRadius),
     ]);
+    rad.classList.add('row-2');
 
     // Shadow (basic)
     const sh = row([
@@ -320,7 +329,7 @@
     sec.appendChild = function (child) { body.appendChild(child); return sec; };
     return sec;
   }
-
+ 
   function row(children) { return el('div', { class:'prop-row' }, children); }
   function label(text){ return el('label', { class:'prop-label', text }); }
   function input(attrs, on){ const i = el('input', attrs); if (on) i.addEventListener('input', on); return i; }
