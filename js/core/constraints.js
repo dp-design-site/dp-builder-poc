@@ -1,4 +1,4 @@
-// js/core/constraints.js — v2.3: фикc за изчезващи точки (филтър в MutationObserver)
+// js/core/constraints.js — v2.4: edit contextmenu активен и извън режим + ALT skip snap
 // пасивни точки при селекция, блок на глобалния contextmenu върху хендъли,
 // click→click: ПЪРВИЯТ се мести към ВТОРИЯ (A→B)
 import { createConstraint, deleteConstraint, getConstraintsForElement, getUsedAnchors, applyAround } from './constraints-engine.js';
@@ -8,6 +8,7 @@ const state = {
   firstPick: null,         // { el, anchor }
   cursorLine: null,
   hoverEl: null,
+  altSnapSkip: false,      // ново: когато е true → не snap-ваме към свързани
 };
 
 const OK_X = ['left','centerX','right'];
@@ -51,7 +52,7 @@ function addHandlesTo(el){
     if (used.has(name)) h.classList.add('used');
     h.addEventListener('mouseenter', ()=>{ h.classList.add('hover'); if(used.has(name)) highlightCounterpart(el.id, name, true); });
     h.addEventListener('mouseleave', ()=>{ h.classList.remove('hover'); if(used.has(name)) highlightCounterpart(el.id, name, false); });
-    h.addEventListener('contextmenu', (e)=>{ e.preventDefault(); e.stopPropagation(); if (state.mode !== 'none') openCtxMenu(e.clientX,e.clientY, el, name, h); });
+    h.addEventListener('contextmenu', (e)=>{ e.preventDefault(); e.stopPropagation(); openCtxMenu(e.clientX,e.clientY, el, name, h); });
     h.addEventListener('pointerdown', (e)=>{ e.stopPropagation(); e.preventDefault(); pickAnchor(el, name, h); });
     el.appendChild(h);
   });
@@ -95,7 +96,6 @@ function highlightCounterpart(elId, anchor, on){
 
 // ---- Click→Click ----
 function pickAnchor(el, anchor, handleEl){
-  if (state.mode === 'none') return; // извън режим: само визуализация
   document.querySelectorAll('.c-handle.pick').forEach(n=>n.classList.remove('pick'));
   handleEl?.classList.add('pick');
   if (!state.firstPick){ state.firstPick = { el, anchor }; return; }
@@ -114,17 +114,13 @@ function resetPick(){ state.firstPick = null; document.querySelectorAll('.c-hand
 function observeSelectionChanges(){
   const canvas = document.getElementById('canvas'); if (!canvas) return;
   const obs = new MutationObserver((mutations) => {
-    // Реагирай само ако САМИЯТ widget е сменил класовете си (селект/деселект)
     const widgetClassChanged = mutations.some(m =>
       m.type === 'attributes' && m.attributeName === 'class' &&
       m.target instanceof Element && m.target.classList.contains('widget')
     );
-    if (!widgetClassChanged) return; // игнорирай hover по .c-handle и други вътрешни промени
-
-    // чистим хендъли от всички widgets
+    if (!widgetClassChanged) return;
     document.querySelectorAll('.widget').forEach(w => removeHandlesFrom(w));
-
-    if (state.mode !== 'none') return; // в активен режим UI-то за хендъли се управлява другаде
+    if (state.mode !== 'none') return;
     const sel = document.querySelector('.widget.selected');
     if (sel) { injectHandleStyles(); showUsedHandles(sel); }
   });
@@ -151,7 +147,6 @@ export function setMode(mode){
   state.mode = mode; document.body.classList.toggle('constraints-mode', mode !== 'none');
   if (mode === 'none'){
     resetPick(); removeAllHandles();
-    // при излизане показваме пасивните точки на селектирания елемент (ако има)
     const sel = document.querySelector('.widget.selected');
     if (sel) { injectHandleStyles(); showUsedHandles(sel); }
   } else {
@@ -163,7 +158,16 @@ export function getMode(){ return state.mode; }
 
 function handleHoverMove(e){ const el = document.elementFromPoint(e.clientX, e.clientY)?.closest('.widget'); if (!el) { setHoverEl(null); return; } setHoverEl(el); }
 
-export function initConstraints(){ document.addEventListener('keydown', (e)=>{ if (e.key==='Escape') { setMode('none'); } }); observeSelectionChanges(); }
+export function initConstraints(){ 
+  document.addEventListener('keydown', (e)=>{ 
+    if (e.key==='Escape') { setMode('none'); } 
+    if (e.key==='Alt') { state.altSnapSkip = true; window.dispatchEvent(new CustomEvent('constraints:altsnap', {detail:{active:true}})); }
+  }); 
+  document.addEventListener('keyup', (e)=>{
+    if (e.key==='Alt'){ state.altSnapSkip=false; window.dispatchEvent(new CustomEvent('constraints:altsnap', {detail:{active:false}})); }
+  });
+  observeSelectionChanges(); 
+}
 
 // Expose глобално
-window.Constraints = { init: initConstraints, setMode, getMode, getConstraintsForElement, applyAround };
+window.Constraints = { init: initConstraints, setMode, getMode, getConstraintsForElement, applyAround, state };
