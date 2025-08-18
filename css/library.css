@@ -1,0 +1,348 @@
+/*
+ DP Configurator — Library Panel Styles (v0.1)
+ File: css/library.css
+
+ Scope: left sidebar library UI used by js/ui/library.js
+ Notes:
+ - Themeable via CSS variables; supports .theme-dark (default) and .theme-light.
+ - Collapsible sidebar, smooth transitions, accessible focus rings.
+ - Grid-based item layout with responsive columns.
+ - Custom scrollbar for WebKit and Firefox.
+*/
+
+/* =============================
+   Root Variables & Themes
+   ============================= */
+:root {
+  --dp-radius-lg: 12px;
+  --dp-radius-md: 10px;
+  --dp-radius-sm: 8px;
+  --dp-gap-lg: 14px;
+  --dp-gap-md: 10px;
+  --dp-gap-sm: 6px;
+  --dp-border: 1px;
+  --dp-font-sm: 12px;
+  --dp-font-md: 14px;
+  --dp-font-lg: 16px;
+  --dp-ease: cubic-bezier(.2,.8,.2,1);
+  --dp-dur: 160ms;
+}
+
+/* Dark theme (default) */
+.theme-dark, body:not(.theme-light) {
+  --dp-bg: #101214;
+  --dp-bg-elev: #15181b;
+  --dp-bg-elev-2: #1a1f24;
+  --dp-panel: #0d0f11;
+  --dp-border-col: #2a2f36;
+  --dp-border-col-soft: #20252b;
+  --dp-text: #e6eaf0;
+  --dp-text-dim: #b6beca;
+  --dp-text-muted: #9aa3af;
+  --dp-accent: #4ea1ff;
+  --dp-accent-2: #7bc67b;
+  --dp-danger: #ff6565;
+  --dp-hover: rgba(255,255,255,0.04);
+  --dp-active: rgba(255,255,255,0.08);
+  --dp-input-bg: #0a0c0e;
+  --dp-shadow: 0 1px 0 rgba(255,255,255,0.03) inset, 0 6px 18px rgba(0,0,0,0.28);
+}
+
+/* Light theme */
+.theme-light {
+  --dp-bg: #f7f8fa;
+  --dp-bg-elev: #ffffff;
+  --dp-bg-elev-2: #ffffff;
+  --dp-panel: #ffffff;
+  --dp-border-col: #d8dde6;
+  --dp-border-col-soft: #e9edf3;
+  --dp-text: #111827;
+  --dp-text-dim: #374151;
+  --dp-text-muted: #6b7280;
+  --dp-accent: #2563eb;
+  --dp-accent-2: #16a34a;
+  --dp-danger: #dc2626;
+  --dp-hover: rgba(17,24,39,0.04);
+  --dp-active: rgba(17,24,39,0.07);
+  --dp-input-bg: #f3f4f6;
+  --dp-shadow: 0 1px 0 rgba(17,24,39,0.04) inset, 0 6px 18px rgba(17,24,39,0.08);
+}
+
+/* =============================
+   Sidebar Layout
+   ============================= */
+#library-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 280px;
+  min-width: 220px;
+  max-width: 360px;
+  height: 100%;
+  background: var(--dp-panel);
+  border-right: var(--dp-border) solid var(--dp-border-col);
+  color: var(--dp-text);
+  box-shadow: var(--dp-shadow);
+  overflow: hidden;
+}
+
+/* Wrapper root produced by JS */
+.dp-lib.sidebar {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0; /* important for overflow children */
+}
+
+/* Collapsed state */
+.dp-lib.sidebar.collapsed {
+  width: 56px;
+  min-width: 56px;
+}
+
+/* When collapsed hide labels and search; keep icons narrow */
+.dp-lib.sidebar.collapsed .dp-lib-title,
+.dp-lib.sidebar.collapsed .dp-lib-search,
+.dp-lib.sidebar.collapsed .dp-lib-item-name,
+.dp-lib.sidebar.collapsed .dp-lib-section-title {
+  display: none !important;
+}
+
+/* Header (title + collapse btn) */
+.dp-lib-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: var(--dp-bg-elev);
+  border-bottom: var(--dp-border) solid var(--dp-border-col);
+}
+
+.dp-lib-title {
+  font-size: var(--dp-font-lg);
+  font-weight: 600;
+  letter-spacing: .2px;
+}
+
+.dp-lib-collapse {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--dp-radius-sm);
+  background: transparent;
+  color: var(--dp-text-dim);
+  border: var(--dp-border) solid var(--dp-border-col);
+  cursor: pointer;
+  transition: background var(--dp-dur) var(--dp-ease), color var(--dp-dur) var(--dp-ease);
+}
+.dp-lib-collapse:hover { background: var(--dp-hover); color: var(--dp-text); }
+.dp-lib-collapse:active { background: var(--dp-active); }
+.dp-lib-collapse svg { transform: rotate(270deg); }
+.dp-lib.sidebar.collapsed .dp-lib-collapse svg { transform: rotate(90deg); }
+
+/* =============================
+   Search
+   ============================= */
+.dp-lib-search {
+  padding: 10px 12px;
+  background: var(--dp-bg-elev);
+  border-bottom: var(--dp-border) solid var(--dp-border-col);
+}
+
+.dp-lib-search-input {
+  display: block;
+  width: 100%;
+  height: 34px;
+  padding: 6px 10px;
+  font-size: var(--dp-font-md);
+  color: var(--dp-text);
+  background: var(--dp-input-bg);
+  border: var(--dp-border) solid var(--dp-border-col);
+  border-radius: var(--dp-radius-md);
+  outline: none;
+  transition: border-color var(--dp-dur) var(--dp-ease), background var(--dp-dur) var(--dp-ease);
+}
+.dp-lib-search-input::placeholder { color: var(--dp-text-muted); }
+.dp-lib-search-input:focus { border-color: var(--dp-accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--dp-accent) 30%, transparent); }
+
+/* =============================
+   Category List
+   ============================= */
+.dp-lib-list {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--dp-gap-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--dp-gap-md);
+  background: var(--dp-bg);
+}
+
+/* Category section card */
+.dp-lib-section {
+  background: var(--dp-bg-elev-2);
+  border: var(--dp-border) solid var(--dp-border-col);
+  border-radius: var(--dp-radius-lg);
+  overflow: hidden;
+}
+
+.dp-lib-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  cursor: pointer;
+  user-select: none;
+  background: linear-gradient(0deg, transparent, var(--dp-hover));
+}
+
+.dp-lib-section-title {
+  font-weight: 600;
+  font-size: var(--dp-font-md);
+  color: var(--dp-text);
+}
+
+.dp-lib-section-toggle {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--dp-radius-sm);
+  background: transparent;
+  color: var(--dp-text-dim);
+  border: var(--dp-border) solid var(--dp-border-col);
+  transition: background var(--dp-dur) var(--dp-ease), color var(--dp-dur) var(--dp-ease), transform var(--dp-dur) var(--dp-ease);
+}
+.dp-lib-section-toggle:hover { background: var(--dp-hover); color: var(--dp-text); }
+
+/* Collapsing category */
+.dp-lib-section.collapsed .dp-lib-grid { display: none; }
+.dp-lib-section.collapsed .dp-lib-section-toggle svg { transform: rotate(-90deg); }
+
+/* =============================
+   Items Grid
+   ============================= */
+.dp-lib-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--dp-gap-md);
+  padding: var(--dp-gap-md);
+}
+
+/* Widen grid on larger sidebars */
+@media (min-width: 1200px) {
+  #library-panel { max-width: 420px; }
+  .dp-lib-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+.dp-lib-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dp-gap-sm);
+  padding: 8px;
+  border-radius: var(--dp-radius-md);
+  background: var(--dp-bg);
+  border: var(--dp-border) solid var(--dp-border-col);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.02) inset;
+  cursor: grab;
+  user-select: none;
+  transition: transform var(--dp-dur) var(--dp-ease), background var(--dp-dur) var(--dp-ease), border-color var(--dp-dur) var(--dp-ease);
+}
+.dp-lib-item:hover { background: var(--dp-hover); }
+.dp-lib-item:active { cursor: grabbing; transform: scale(0.98); }
+.dp-lib-item:focus { outline: none; box-shadow: 0 0 0 2px color-mix(in srgb, var(--dp-accent) 30%, transparent); }
+
+.dp-lib-item-thumb {
+  height: 64px;
+  border-radius: var(--dp-radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--dp-input-bg);
+  border: 1px dashed var(--dp-border-col);
+}
+
+.thumb-rect {
+  width: 60%;
+  height: 50%;
+  border-radius: 4px;
+  border: 2px solid var(--dp-text-muted);
+}
+
+.dp-lib-item-name {
+  font-size: var(--dp-font-sm);
+  color: var(--dp-text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* =============================
+   Focus & Accessibility
+   ============================= */
+.dp-lib-section-header:focus,
+.dp-lib-item[tabindex="0"]:focus,
+.dp-lib-section-header button:focus,
+.dp-lib-collapse:focus,
+.dp-lib-section-toggle:focus,
+.dp-lib-search-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--dp-accent) 35%, transparent);
+}
+
+/* Improve hit target on buttons */
+.dp-lib-section-header button,
+.dp-lib-collapse {
+  position: relative;
+}
+.dp-lib-section-header button::after,
+.dp-lib-collapse::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+}
+
+/* =============================
+   Scrollbars (WebKit + Firefox)
+   ============================= */
+.dp-lib-list { scrollbar-color: var(--dp-border-col) transparent; scrollbar-width: thin; }
+.dp-lib-list::-webkit-scrollbar { width: 10px; }
+.dp-lib-list::-webkit-scrollbar-track { background: transparent; }
+.dp-lib-list::-webkit-scrollbar-thumb { background-color: var(--dp-border-col); border-radius: 10px; border: 2px solid transparent; background-clip: padding-box; }
+.dp-lib-list::-webkit-scrollbar-thumb:hover { background-color: color-mix(in srgb, var(--dp-border-col) 80%, var(--dp-text) 20%); }
+
+/* =============================
+   Collapsed Icon Strip Styling
+   ============================= */
+.dp-lib.sidebar.collapsed .dp-lib-grid { grid-template-columns: 1fr; }
+.dp-lib.sidebar.collapsed .dp-lib-item { padding: 6px; }
+.dp-lib.sidebar.collapsed .dp-lib-item-thumb { height: 40px; }
+
+/* =============================
+   Drag & Drop Visual Cues
+   ============================= */
+/* When dragging from library, keep subtle visual state */
+.dp-lib-item[draggable="true"] { -webkit-user-drag: element; }
+
+/* Canvas can add a class during dragover for highlighting drop zone (optional) */
+#canvas.dp-drop-over { outline: 2px dashed var(--dp-accent); outline-offset: -4px; }
+
+/* =============================
+   Reduced Motion Preference
+   ============================= */
+@media (prefers-reduced-motion: reduce) {
+  * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
+
+/* =============================
+   Utility (optional)
+   ============================= */
+.hidden { display: none !important; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+
+/* End of library.css */
