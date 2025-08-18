@@ -26,6 +26,16 @@
     #canvas { position: relative; flex: 1 1 auto; min-height: 0; }
     .snapbar { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border-top: 1px solid var(--dp-border-col, #2a2f36); background: var(--dp-bg-elev, #15181b); color: var(--dp-text, #e6eaf0); }
     .snapbar label { font-size: 12px; display: inline-flex; align-items: center; gap: 6px; }
+
+    :root{ --ribbon-h:56px; }
+    /* Reserve space for a fixed ribbon (if the ribbon component uses position:fixed) */
+    #ribbon-mount{ height: var(--ribbon-h); }
+
+    /* Canvas scroll area (only canvas should scroll) */
+    #canvas { overflow: auto; }
+    /* Temporary large scrollable area so you can test canvas-only scroll;
+       replace later with real infinite canvas or content-size calculation */
+    #canvas::after { content:""; position:absolute; left:0; top:0; width:2000px; height:1400px; pointer-events:none; }
   </style>
 </head>
 <body>
