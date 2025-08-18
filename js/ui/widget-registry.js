@@ -27,8 +27,8 @@
      WidgetRegistry.define('window-basic', {
        init(el, options, ctx) {
          // setup inner behavior, attach listeners, etc.
-       },*/
-       schema: { /* optional: property schema for Properties panel */ },
+       },
+       schema: { /* optional: property schema for Properties panel */ 
        getState(el) { /* optional: return serializable state */ },
        setState(el, state) { /* optional: apply state */ },
        serialize(el) { /* optional: return snapshot for save-to-library */ }
