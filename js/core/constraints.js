@@ -1,4 +1,5 @@
-// js/core/constraints.js — v2.2: пасивни точки при селекция, блок на глобалния contextmenu върху хендъли,
+// js/core/constraints.js — v2.3: фикc за изчезващи точки (филтър в MutationObserver)
+// пасивни точки при селекция, блок на глобалния contextmenu върху хендъли,
 // click→click: ПЪРВИЯТ се мести към ВТОРИЯ (A→B)
 import { createConstraint, deleteConstraint, getConstraintsForElement, getUsedAnchors, applyAround } from './constraints-engine.js';
 
@@ -112,9 +113,18 @@ function resetPick(){ state.firstPick = null; document.querySelectorAll('.c-hand
 // ---- Selection observer: показваме пасивни точки извън режим ----
 function observeSelectionChanges(){
   const canvas = document.getElementById('canvas'); if (!canvas) return;
-  const obs = new MutationObserver(() => {
+  const obs = new MutationObserver((mutations) => {
+    // Реагирай само ако САМИЯТ widget е сменил класовете си (селект/деселект)
+    const widgetClassChanged = mutations.some(m =>
+      m.type === 'attributes' && m.attributeName === 'class' &&
+      m.target instanceof Element && m.target.classList.contains('widget')
+    );
+    if (!widgetClassChanged) return; // игнорирай hover по .c-handle и други вътрешни промени
+
+    // чистим хендъли от всички widgets
     document.querySelectorAll('.widget').forEach(w => removeHandlesFrom(w));
-    if (state.mode !== 'none') return;
+
+    if (state.mode !== 'none') return; // в активен режим UI-то за хендъли се управлява другаде
     const sel = document.querySelector('.widget.selected');
     if (sel) { injectHandleStyles(); showUsedHandles(sel); }
   });
