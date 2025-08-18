@@ -1,49 +1,105 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="bg" class="theme-dark">
 <head>
-  <meta charset="UTF-8">
-  <title>DP Snap Guide Demo</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <link rel="stylesheet" href="css/main.css">
-  <link rel="icon" href="favicon.png" type="image/png">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DP Configurator — Library Panel Demo</title>
+
+  <!-- Base styles (keep existing if present) -->
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="icon" href="favicon.png" type="image/png" />
+
+  <!-- Project styles per structure -->
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/ribbon.css" />
+  <link rel="stylesheet" href="css/constraints.css" />
+  <link rel="stylesheet" href="css/library.css" />
+
+  <!-- Minimal layout helper for sidebar + canvas; keep lightweight to avoid conflicts -->
+  <style>
+    html, body { height: 100%; margin: 0; }
+    body { display: flex; flex-direction: column; }
+    #workspace { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: auto 1fr; }
+    /* Left panel width is controlled inside css/library.css via #library-panel */
+    #main-stage { position: relative; display: flex; flex-direction: column; min-width: 0; }
+    #canvas { position: relative; flex: 1 1 auto; min-height: 0; }
+    .snapbar { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border-top: 1px solid var(--dp-border-col, #2a2f36); background: var(--dp-bg-elev, #15181b); color: var(--dp-text, #e6eaf0); }
+    .snapbar label { font-size: 12px; display: inline-flex; align-items: center; gap: 6px; }
+  </style>
 </head>
 <body>
+  <!-- Ribbon mount (kept) -->
   <div id="ribbon-mount"></div>
-  <div id="canvas">
-    <div class="widget" id="panel1" data-x="180" data-y="120" style="width:320px;height:140px;">Simple Panel 1</div>
-    <div class="widget" id="panel2" data-x="600" data-y="280" style="width:320px;height:140px;">Simple Panel 2</div>
-    <div id="guide-v"></div>
-    <div id="guide-h"></div>
-    <div id="marquee" style="display:none;position:absolute;border:2px dashed #3ea6ff;background:rgba(62,166,255,0.08);z-index:9999;"></div>
 
+  <!-- Workspace: Library Sidebar + Main Stage (Canvas + Bars) -->
+  <div id="workspace">
+    <!-- Left Sidebar Library -->
+    <aside id="library-panel" aria-label="Библиотека"></aside>
+
+    <!-- Main Stage -->
+    <section id="main-stage">
+      <div id="canvas" aria-label="Работно платно">
+        <!-- Existing demo widgets -->
+        <div class="widget" id="panel1" data-x="180" data-y="120" style="width:320px;height:140px;">Simple Panel 1</div>
+        <div class="widget" id="panel2" data-x="600" data-y="280" style="width:320px;height:140px;">Simple Panel 2</div>
+        <div id="guide-v"></div>
+        <div id="guide-h"></div>
+        <div id="marquee" style="display:none;position:absolute;border:2px dashed #3ea6ff;background:rgba(62,166,255,0.08);z-index:9999;"></div>
+      </div>
+
+      <!-- Snapbar controls (kept) -->
+      <div class="snapbar">
+        <label><input type="checkbox" id="snap-enable" checked> Snap</label>
+        <label><input type="checkbox" id="snap-edges" checked> Edges</label>
+        <label><input type="checkbox" id="snap-centers" checked> Centers</label>
+        <label>Snap Tol: <input type="range" id="snap-tolerance" min="1" max="15" value="3"></label>
+        <label>Style:
+          <select id="guide-style">
+            <option value="dashed">Dashed</option>
+            <option value="solid">Solid</option>
+            <option value="dotted">Dotted</option>
+          </select>
+        </label>
+        <label>
+          Color:
+          <input type="color" id="guide-color" value="#38A7DA" style="vertical-align:middle;">
+          <input type="text" id="guide-color-hex" value="#38A7DA" style="width:90px; margin-left:4px; vertical-align:middle;">
+        </label>
+        <label>Width: <input type="number" id="guide-width" min="0.5" max="8" value="1" style="width:40px"></label>
+      </div>
+    </section>
   </div>
 
-  <div class="snapbar">
-  <label><input type="checkbox" id="snap-enable" checked> Snap</label>
-  <label><input type="checkbox" id="snap-edges" checked> Edges</label>
-  <label><input type="checkbox" id="snap-centers" checked> Centers</label>
-  <label>Snap Tol: <input type="range" id="snap-tolerance" min="1" max="15" value="3"></label>
-  <label>Style: 
-    <select id="guide-style">
-      <option value="dashed">Dashed</option>
-      <option value="solid">Solid</option>
-      <option value="dotted">Dotted</option>
-    </select>
-  </label>
-  <label>
-    Color: 
-    <input type="color" id="guide-color" value="#38A7DA" style="vertical-align:middle;">
-    <input type="text" id="guide-color-hex" value="#38A7DA" style="width:90px; margin-left:4px; vertical-align:middle;">
-  </label>
-  <label>Width: <input type="number" id="guide-width" min="0,5" max="8" value="1" style="width:40px"></label>
-</div>
-
-
-  
+  <!-- External deps -->
   <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
+
+  <!-- Context menu mount (kept) -->
   <div id="context-menu-mount"></div>
+
+  <!-- Core loader and app -->
   <script src="js/core/component-loader.js"></script>
   <script type="module" src="js/app.js"></script>
 
+  <!-- Library panel module -->
+  <script src="js/ui/library.js"></script>
+
+  <!-- Bootstrap Library → Canvas wiring -->
+  <script>
+    // Mount the library after app bootstrap; if app needs to expose hooks like dp.registerWidget, it should do so before this runs.
+    (function initLibrary() {
+      try {
+        if (!window.LibraryUI) return console.warn('LibraryUI not found: js/ui/library.js not loaded');
+        LibraryUI.mount({ container: '#library-panel', canvas: '#canvas' });
+
+        // Optional: highlight canvas while dragging over it
+        const canvas = document.querySelector('#canvas');
+        canvas.addEventListener('dragover', () => canvas.classList.add('dp-drop-over'));
+        canvas.addEventListener('dragleave', () => canvas.classList.remove('dp-drop-over'));
+        canvas.addEventListener('drop', () => canvas.classList.remove('dp-drop-over'));
+      } catch (e) {
+        console.error('Library init error:', e);
+      }
+    })();
+  </script>
 </body>
 </html>
