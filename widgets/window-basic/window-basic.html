@@ -1,0 +1,19 @@
+<!--
+ DP Configurator — Widget: Window (window-basic)
+ File: widgets/window-basic/window-basic.html
+
+ Notes
+ - This is the inner markup that will be injected into <div class="widget" data-type="window-basic"> …
+ - CSS is namespaced to .widget[data-type="window-basic"] to avoid leaks.
+ - JS behavior will be provided by widgets/window-basic/window-basic.js via WidgetRegistry.define().
+-->
+<div class="wb" role="group" aria-label="Window widget">
+  <div class="wb-title" role="heading" aria-level="3">
+    <span class="wb-name">Window</span>
+  </div>
+  <div class="wb-body">
+    <div class="wb-frame" aria-hidden="true">
+      <div class="wb-sash"></div>
+    </div>
+  </div>
+</div>
