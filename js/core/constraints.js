@@ -1,5 +1,6 @@
-// js/core/constraints.js — v2: Click→Click, показваме само върху hover + индикатори за използвани точки и контекстно меню Edit/Delete
-import { createConstraint, deleteConstraint, getConstraintsForElement, applyConstraints, getUsedAnchors, applyAround } from './constraints-engine.js';
+// js/core/constraints.js — v2.2: пасивни точки при селекция, блок на глобалния contextmenu върху хендъли,
+// click→click: ПЪРВИЯТ се мести към ВТОРИЯ (A→B)
+import { createConstraint, deleteConstraint, getConstraintsForElement, getUsedAnchors, applyAround } from './constraints-engine.js';
 
 const state = {
   mode: 'none',            // 'none' | 'alignV' | 'alignH'
@@ -27,6 +28,7 @@ function injectHandleStyles(){ if(document.getElementById('constraint-handle-sty
   body.constraints-mode .widget .c-handle{ pointer-events:auto !important; }
   .c-handle{position:absolute; z-index:999; background:#49c0ff; opacity:.65; border-radius:50%; box-shadow:0 0 0 1px rgba(0,0,0,.25); width:16px; height:16px; transform: translate(-50%, -50%);}  
   .c-handle.used{ background:#ffd257; opacity:1; }
+  .c-handle.passive{ pointer-events:none; opacity:.85; background:#ffd257; }
   .c-handle.hover{ opacity:1; transform: translate(-50%, -50%) scale(1.15); }
   .c-handle.pick{ outline: 2px solid #ffe08a; }
   .c-handle.context{ outline: 2px solid #7ad3ff; }
@@ -36,12 +38,7 @@ function injectHandleStyles(){ if(document.getElementById('constraint-handle-sty
 `; document.head.appendChild(s);} 
 
 function anchorsForMode(mode){ if(mode==='alignV') return OK_X; if(mode==='alignH') return OK_Y; return [...OK_X, ...OK_Y]; }
-
-function handlePosMap(r){ return {
-  left:     { x:r.left,    y:r.centerY }, right:{ x:r.right, y:r.centerY },
-  top:      { x:r.centerX, y:r.top },     bottom:{ x:r.centerX, y:r.bottom },
-  centerX:  { x:r.centerX, y:r.centerY }, centerY:{ x:r.centerX, y:r.centerY }
-}; }
+function handlePosMap(r){ return { left:{x:r.left,y:r.centerY}, right:{x:r.right,y:r.centerY}, top:{x:r.centerX,y:r.top}, bottom:{x:r.centerX,y:r.bottom}, centerX:{x:r.centerX,y:r.centerY}, centerY:{x:r.centerX,y:r.centerY} }; }
 
 function addHandlesTo(el){
   if (el.querySelector('.c-handle')) return;
@@ -53,7 +50,8 @@ function addHandlesTo(el){
     if (used.has(name)) h.classList.add('used');
     h.addEventListener('mouseenter', ()=>{ h.classList.add('hover'); if(used.has(name)) highlightCounterpart(el.id, name, true); });
     h.addEventListener('mouseleave', ()=>{ h.classList.remove('hover'); if(used.has(name)) highlightCounterpart(el.id, name, false); });
-    h.addEventListener('pointerdown', (e)=>{ e.stopPropagation(); e.preventDefault(); if (e.button===2){ openCtxMenu(e.clientX,e.clientY, el, name, h); return;} pickAnchor(el, name, h); });
+    h.addEventListener('contextmenu', (e)=>{ e.preventDefault(); e.stopPropagation(); if (state.mode !== 'none') openCtxMenu(e.clientX,e.clientY, el, name, h); });
+    h.addEventListener('pointerdown', (e)=>{ e.stopPropagation(); e.preventDefault(); pickAnchor(el, name, h); });
     el.appendChild(h);
   });
 }
@@ -67,76 +65,95 @@ function setHoverEl(el){
   state.hoverEl = el; if (el && el !== keep) addHandlesTo(el);
 }
 
+// ---- Passive used-handles (outside of tool mode) ----
+function showUsedHandles(el){
+  removeHandlesFrom(el);
+  const used = getUsedAnchors(el.id);
+  if (!used.size) return;
+  const r = getRect(el); const map = handlePosMap(r);
+  for (const [anchor] of used){
+    const d = map[anchor]; if (!d) continue;
+    const h = document.createElement('div');
+    h.className = 'c-handle used passive';
+    h.dataset.anchor = anchor;
+    h.style.left = (d.x - r.left) + 'px';
+    h.style.top  = (d.y - r.top) + 'px';
+    el.appendChild(h);
+  }
+}
+
 // ---- Counterpart highlight ----
 function highlightCounterpart(elId, anchor, on){
   const list = getUsedAnchors(elId).get(anchor) || [];
   for (const item of list){
     const other = document.getElementById(item.otherElId); if (!other) continue;
-    // подсигури хендъли върху другия
     if (!other.querySelector('.c-handle')) addHandlesTo(other);
-    other.querySelectorAll(`.c-handle[data-anchor="${item.otherAnchor}"]`).forEach(h=>{
-      h.classList.toggle('context', !!on);
-    });
+    other.querySelectorAll(`.c-handle[data-anchor="${item.otherAnchor}"]`).forEach(h=>{ h.classList.toggle('context', !!on); });
   }
 }
 
 // ---- Click→Click ----
 function pickAnchor(el, anchor, handleEl){
+  if (state.mode === 'none') return; // извън режим: само визуализация
   document.querySelectorAll('.c-handle.pick').forEach(n=>n.classList.remove('pick'));
   handleEl?.classList.add('pick');
   if (!state.firstPick){ state.firstPick = { el, anchor }; return; }
   const a = state.firstPick; const b = { el, anchor };
   if (state.mode==='alignV' && !(OK_X.includes(a.anchor) && OK_X.includes(b.anchor))) { resetPick(); return; }
   if (state.mode==='alignH' && !(OK_Y.includes(a.anchor) && OK_Y.includes(b.anchor))) { resetPick(); return; }
-  // Move first → second (second is reference)
-  createConstraint(b.el, b.anchor, a.el, a.anchor);
+  // Първият се мести към втория → A към B
+  createConstraint(a.el, a.anchor, b.el, b.anchor);
   applyAround(b.el.id);
   resetPick();
 }
 
 function resetPick(){ state.firstPick = null; document.querySelectorAll('.c-handle.pick').forEach(n=>n.classList.remove('pick')); closeCtxMenu(); }
 
-// ---- Indicators replaced with used-handle glow (done via .used class) ----
-// оставяме renderIndicators само ако трябва да се показват баджове по-късно
-function renderIndicators(){ /* no-op (заменено от .used) */ }
-
-function observeSelectionChanges(){ /* можем да добавим логика за авто show/hide при селекция */ }
+// ---- Selection observer: показваме пасивни точки извън режим ----
+function observeSelectionChanges(){
+  const canvas = document.getElementById('canvas'); if (!canvas) return;
+  const obs = new MutationObserver(() => {
+    document.querySelectorAll('.widget').forEach(w => removeHandlesFrom(w));
+    if (state.mode !== 'none') return;
+    const sel = document.querySelector('.widget.selected');
+    if (sel) { injectHandleStyles(); showUsedHandles(sel); }
+  });
+  obs.observe(canvas, { subtree:true, attributes:true, attributeFilter:['class'] });
+}
 
 // ---- Context menu (Edit/Delete) ----
 let ctxEl = null;
 function openCtxMenu(x,y, el, anchor, handleEl){ closeCtxMenu(); const box=document.createElement('div'); box.className='c-ctx'; box.style.left=x+'px'; box.style.top=y+'px';
   const usedList = getUsedAnchors(el.id).get(anchor)||[];
-  // При повече от една връзка към същия anchor — показваме по една команда на ред
   usedList.forEach(item=>{
-    const btnE=document.createElement('button'); btnE.textContent=`Edit (${anchor}↔${item.otherAnchor})`; btnE.onclick=()=>{ closeCtxMenu(); // Edit = rebind: махаме старата и чакаме нова точка
-      deleteConstraint(item.id); // временно откачане
-      // маркирай текущата като firstPick, за да се избере нова втора
-      state.firstPick = { el, anchor };
-      handleEl.classList.add('pick');
-    }; box.appendChild(btnE);
-
-    const btnD=document.createElement('button'); btnD.textContent=`Delete (${anchor}↔${item.otherAnchor})`; btnD.onclick=()=>{ deleteConstraint(item.id); closeCtxMenu(); refreshHover(); }; box.appendChild(btnD);
+    const btnE=document.createElement('button'); btnE.textContent=`Edit (${anchor}↔${item.otherAnchor})`; btnE.onclick=()=>{ closeCtxMenu(); deleteConstraint(item.id); state.firstPick = { el, anchor }; handleEl.classList.add('pick'); }; box.appendChild(btnE);
+    const btnD=document.createElement('button'); btnD.textContent=`Delete (${anchor}↔${item.otherAnchor})`; btnD.onclick=()=>{ deleteConstraint(item.id); closeCtxMenu(); setHoverEl(state.hoverEl); }; box.appendChild(btnD);
   });
   if (!usedList.length){ const i=document.createElement('button'); i.textContent='No constraint here'; i.disabled=true; box.appendChild(i); }
   document.body.appendChild(box); ctxEl=box;
 }
 function closeCtxMenu(){ if(ctxEl){ ctxEl.remove(); ctxEl=null; } }
-function refreshHover(){ setHoverEl(state.hoverEl); }
 
 // ---- Mode handling ----
 export function setMode(mode){
   if (state.mode === mode) return;
   hideCursorLine(); document.removeEventListener('mousemove', updateCursorLine); document.removeEventListener('mousemove', handleHoverMove);
   state.mode = mode; document.body.classList.toggle('constraints-mode', mode !== 'none');
-  if (mode === 'none'){ resetPick(); removeAllHandles(); }
-  else { injectHandleStyles(); document.addEventListener('mousemove', updateCursorLine); document.addEventListener('mousemove', handleHoverMove, { passive:true }); }
+  if (mode === 'none'){
+    resetPick(); removeAllHandles();
+    // при излизане показваме пасивните точки на селектирания елемент (ако има)
+    const sel = document.querySelector('.widget.selected');
+    if (sel) { injectHandleStyles(); showUsedHandles(sel); }
+  } else {
+    injectHandleStyles(); document.addEventListener('mousemove', updateCursorLine); document.addEventListener('mousemove', handleHoverMove, { passive:true });
+  }
   window.dispatchEvent(new CustomEvent('constraints:mode', { detail: { mode } }));
 }
 export function getMode(){ return state.mode; }
 
 function handleHoverMove(e){ const el = document.elementFromPoint(e.clientX, e.clientY)?.closest('.widget'); if (!el) { setHoverEl(null); return; } setHoverEl(el); }
 
-export function initConstraints(){ document.addEventListener('keydown', (e)=>{ if (e.key==='Escape') { setMode('none'); } }); }
+export function initConstraints(){ document.addEventListener('keydown', (e)=>{ if (e.key==='Escape') { setMode('none'); } }); observeSelectionChanges(); }
 
 // Expose глобално
 window.Constraints = { init: initConstraints, setMode, getMode, getConstraintsForElement, applyAround };
