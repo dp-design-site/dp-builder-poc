@@ -1,8 +1,8 @@
 /*
- DP Configurator — Properties Panel (v0.13, layout tweaks)
+ DP Configurator — Properties Panel (v0.12, MVP)
  File: js/ui/properties.js
 
- Scope of v0.13:
+ Scope of v0.12:
  - Right sidebar panel that edits a SINGLE selected widget.
  - Groups implemented: "Идентичност" (ID/Name), "Разположение" (X,Y,W,H,Z-index), "Външен вид" (bg, border, radius, shadow).
  - Two-way sync:
@@ -10,9 +10,6 @@
     • When inputs change, widget styles update live.
  - Appearance is applied to an inner wrapper if present ('.wb') to avoid
    clobbering the selection highlight on the outer .widget.
- - Layout improvements:
-    • Coordinates arranged in two rows (X/Y then W/H).
-    • Color fields arranged side-by-side with HEX inputs.
 */
 
 (function (global) {
@@ -53,6 +50,7 @@
   const defer = (fn) => () => requestAnimationFrame(fn);
 
   function onMutations(muts) {
+    // If the selected widget changed (moved/resized/selected toggle), update fields
     if (!S.selected) return;
     for (const m of muts) {
       if (m.target === S.selected || S.selected.contains(m.target)) {
@@ -91,6 +89,7 @@
     setValue('#f-shadow-spread', num(state?.shadow?.spread ?? 0));
     setColor('#f-shadow-color', '#f-shadow-hex', state?.shadow?.color || '#000000');
 
+    // Enable/disable sections
     setDisabledGroup(!S.selected);
   }
 
@@ -101,6 +100,13 @@
     if (!node) return;
     if (node.type === 'checkbox') node.checked = !!v;
     else node.value = v ?? '';
+    // Ensure proper sizing
+    if (node.tagName === 'INPUT' && node.type === 'text') {
+      node.style.minWidth = '80px';
+    }
+    if (node.tagName === 'INPUT' && node.type === 'number') {
+      node.style.minWidth = '60px';
+    }
   }
 
   function getValue(sel) {
@@ -132,8 +138,12 @@
   // ============ Sections ============
   function sectionIdentity() {
     const wrap = section('Идентичност', 'identity');
-    wrap.appendChild(row([ label('ID'), input({ id:'f-id', type:'text', readonly:true }) ]));
-    wrap.appendChild(row([ label('Име'), input({ id:'f-name', type:'text', placeholder:'Name' }, onNameChange) ]));
+    const r1 = row([ label('ID'), input({ id:'f-id', type:'text', readonly:true }) ]);
+    r1.classList.add('row-2');
+    const r2 = row([ label('Име'), input({ id:'f-name', type:'text', placeholder:'Name' }, onNameChange) ]);
+    r2.classList.add('row-2');
+    wrap.appendChild(r1);
+    wrap.appendChild(r2);
     return wrap;
   }
 
@@ -143,10 +153,12 @@
       label('X'), input({ id:'f-x', type:'number', step:'1' }, onGeometryInput),
       label('Y'), input({ id:'f-y', type:'number', step:'1' }, onGeometryInput),
     ]);
+    g1.classList.add('row-4');
     const g2 = row([
       label('W'), input({ id:'f-w', type:'number', min:'20', step:'1' }, onGeometryInput),
       label('H'), input({ id:'f-h', type:'number', min:'20', step:'1' }, onGeometryInput),
     ]);
+    g2.classList.add('row-4');
 
     const z = el('div', { class:'zline' }, [
       label('Z'), input({ id:'f-z', type:'number', step:'1' }, onZIndexInput),
@@ -169,6 +181,7 @@
       input({ id:'f-bg-color', type:'color' }, onBGColor),
       input({ id:'f-bg-hex', type:'text', class:'hex', placeholder:'#RRGGBB' }, onBGHex),
     ]);
+    bg.classList.add('row-color');
 
     // Border
     const bc = row([
@@ -177,11 +190,13 @@
       input({ id:'f-border-hex', type:'text', class:'hex', placeholder:'#RRGGBB' }, onBorderHex),
       input({ id:'f-border-width', type:'number', min:'0', step:'1', title:'Width (px)' }, onBorderWidth),
     ]);
+    bc.classList.add('row-color');
 
     // Radius
     const rad = row([
       label('Radius'), input({ id:'f-radius', type:'number', min:'0', step:'1' }, onRadius),
     ]);
+    rad.classList.add('row-2');
 
     // Shadow (basic)
     const sh = row([
@@ -308,56 +323,4 @@
 
   function toNum(v, def='') { const n = parseFloat(v); return Number.isFinite(n) ? n : def; }
 
-  function dispatch(name, detail) { document.dispatchEvent(new CustomEvent(name, { detail })); }
-
-  // ============ DOM Builders ============
-  function section(title, key) {
-    const sec = el('section', { class: 'prop-section', 'data-key': key });
-    const header = el('header', { class: 'prop-header', tabindex:'0' }, [ el('span', { class:'prop-title', text: title }), toggleBtn() ]);
-    const body = el('div', { class: 'prop-body' });
-    header.querySelector('.prop-toggle').addEventListener('click', () => sec.classList.toggle('collapsed'));
-    header.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' ') { e.preventDefault(); sec.classList.toggle('collapsed'); }});
-    sec.appendChild(header); sec.appendChild(body);
-    sec.appendChild = function (child) { body.appendChild(child); return sec; };
-    return sec;
-  }
-
-  function row(children) { return el('div', { class:'prop-row' }, children); }
-  function label(text){ return el('label', { class:'prop-label', text }); }
-  function input(attrs, on){ const i = el('input', attrs); if (on) i.addEventListener('input', on); return i; }
-  function btn(text, title, on){ const b = el('button', { class:'prop-btn', title }, [ document.createTextNode(text) ]); if (on) b.addEventListener('click', on); return b; }
-  function toggleBtn(){ const b = el('button', { class:'prop-toggle', title:'Покажи/Скрий' }); b.appendChild(svgChevron()); return b; }
-
-  function el(tag, attrs, children){ const n=document.createElement(tag); if(attrs){ for(const[k,v] of Object.entries(attrs)){ if(k==='class') n.className=v; else if(k==='text') n.textContent=v; else n.setAttribute(k,v);} } if(children){ for(const c of children) n.appendChild(c);} return n; }
-
-  function svgChevron(){ const svg=document.createElementNS('http://www.w3.org/2000/svg','svg'); svg.setAttribute('viewBox','0 0 24 24'); svg.setAttribute('width','16'); svg.setAttribute('height','16'); const p=document.createElementNS('http://www.w3.org/2000/svg','path'); p.setAttribute('d','M8.12 9.29L12 13.17l3.88-3.88 1.41 1.41L12 16l-5.29-5.29 1.41-1.42z'); p.setAttribute('fill','currentColor'); svg.appendChild(p); return svg; }
-
-  function setDisabledGroup(disabled){
-    S.container.querySelectorAll('.prop-section .prop-body input, .prop-section .prop-body button').forEach(el=>{ el.disabled = !!disabled; });
-  }
-
-  // ============ CSS helpers ============
-  function rgbToHex(rgb) {
-    if (!rgb) return '#000000';
-    const m = rgb.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
-    if (!m) return '#000000';
-    const r = parseInt(m[1],10).toString(16).padStart(2,'0');
-    const g = parseInt(m[2],10).toString(16).padStart(2,'0');
-    const b = parseInt(m[3],10).toString(16).padStart(2,'0');
-    return `#${r}${g}${b}`;
-  }
-
-  function parseBoxShadow(bs) {
-    if (!bs || bs === 'none') return { enabled:false };
-    // naive parse: dx dy blur [spread] color
-    const parts = bs.trim().split(/\s+/);
-    const nums = parts.filter(p=>/^-?\d+px$/.test(p)).map(p=>parseInt(p));
-    const color = parts.find(p=>p.startsWith('rgb') || p.startsWith('#')) || '#000000';
-    const [x=0,y=6,blur=12,spread=0] = nums;
-    return { enabled:true, x, y, blur, spread, color: rgbToHex(color) };
-  }
-
-  // Public API
-  const API = { mount };
-  global.PropertiesUI = API;
-})(window);
+  function dispatch(name, detail) { document.dispatchEvent(new CustomEvent(name,
