@@ -100,6 +100,15 @@
     if (!node) return;
     if (node.type === 'checkbox') node.checked = !!v;
     else node.value = v ?? '';
+    // Ensure proper sizing for text and number fields
+    if (node.tagName === 'INPUT') {
+      if (node.type === 'text') {
+        node.style.minWidth = '100px';
+      }
+      if (node.type === 'number') {
+        node.style.minWidth = '70px';
+      }
+    }
   }
 
   function getValue(sel) {
