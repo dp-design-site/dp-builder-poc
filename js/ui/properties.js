@@ -138,12 +138,8 @@
   // ============ Sections ============
   function sectionIdentity() {
     const wrap = section('Идентичност', 'identity');
-    const r1 = row([ label('ID'), input({ id:'f-id', type:'text', readonly:true }) ]);
-    r1.classList.add('row-2');
-    const r2 = row([ label('Име'), input({ id:'f-name', type:'text', placeholder:'Name' }, onNameChange) ]);
-    r2.classList.add('row-2');
-    wrap.appendChild(r1);
-    wrap.appendChild(r2);
+    wrap.appendChild(row([ label('ID'), input({ id:'f-id', type:'text', readonly:true }) ]));
+    wrap.appendChild(row([ label('Име'), input({ id:'f-name', type:'text', placeholder:'Name' }, onNameChange) ]));
     return wrap;
   }
 
@@ -153,12 +149,10 @@
       label('X'), input({ id:'f-x', type:'number', step:'1' }, onGeometryInput),
       label('Y'), input({ id:'f-y', type:'number', step:'1' }, onGeometryInput),
     ]);
-    g1.classList.add('row-4');
     const g2 = row([
       label('W'), input({ id:'f-w', type:'number', min:'20', step:'1' }, onGeometryInput),
       label('H'), input({ id:'f-h', type:'number', min:'20', step:'1' }, onGeometryInput),
     ]);
-    g2.classList.add('row-4');
 
     const z = el('div', { class:'zline' }, [
       label('Z'), input({ id:'f-z', type:'number', step:'1' }, onZIndexInput),
@@ -181,7 +175,6 @@
       input({ id:'f-bg-color', type:'color' }, onBGColor),
       input({ id:'f-bg-hex', type:'text', class:'hex', placeholder:'#RRGGBB' }, onBGHex),
     ]);
-    bg.classList.add('row-color');
 
     // Border
     const bc = row([
@@ -190,13 +183,11 @@
       input({ id:'f-border-hex', type:'text', class:'hex', placeholder:'#RRGGBB' }, onBorderHex),
       input({ id:'f-border-width', type:'number', min:'0', step:'1', title:'Width (px)' }, onBorderWidth),
     ]);
-    bc.classList.add('row-color');
 
     // Radius
     const rad = row([
       label('Radius'), input({ id:'f-radius', type:'number', min:'0', step:'1' }, onRadius),
     ]);
-    rad.classList.add('row-2');
 
     // Shadow (basic)
     const sh = row([
