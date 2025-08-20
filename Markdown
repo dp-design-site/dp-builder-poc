@@ -1,0 +1,39 @@
+📂 dp-builder-poc-main
+│
+├── 📂 components
+│   ├── context-menu.html
+│   └── ribbon.html
+│
+├── 📂 css
+│   ├── library.css
+│   ├── main.css
+│   └── properties.css
+│
+├── 📂 js
+│   ├── 📂 actions
+│   │   └── context-actions.js
+│   ├── 📂 core
+│   │   ├── canvas.js
+│   │   ├── component-loader.js
+│   │   ├── constraints-engine.js
+│   │   ├── constraints.js
+│   │   ├── inspector.js
+│   │   ├── selection.js
+│   │   ├── snap.js
+│   │   └── widgets.js
+│   ├── 📂 ui
+│   │   ├── library.js
+│   │   ├── properties.js
+│   │   └── widget-registry.js
+│   └── app.js
+│
+├── 📂 widgets
+│   └── 📂 window-basic
+│       ├── window-basic.css
+│       ├── window-basic.html
+│       └── window-basic.js
+│
+├── favicon.png
+├── index.html
+├── README.md
+└── styles.css
