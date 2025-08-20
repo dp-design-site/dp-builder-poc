@@ -39,3 +39,34 @@
 ├── index.html                   # Стартова страница с layout (canvas + панели)
 ├── README.md
 └── styles.css                   # Общи стилове за цялото приложение
+
+
++-------------------+                +---------------------+
+|   UI / Library    |  (drag/add)    |   WidgetRegistry    |
+|  (ui/library.js)  +--------------->+ (ui/widget-registry)|
++---------+---------+    dp:create   +----------+----------+
+          |                                     |
+          | enhance(widget,type)                | define/init(type)
+          |                                     v
+          |                           +---------------------+
+          |                           |  Widget Bundle      |
+          |                           | (HTML/CSS/JS:       |
+          |                           |  widgets/window-... |
+          |                           +---------------------+
+          v
++---------+---------+   select/move/resize   +---------------------+
+|     Canvas        |----------------------->|     Properties      |
+| (core/canvas.js)  |     dp:widget-geometry |   (ui/properties)   |
+|  + selection/snap |<-----------------------|  read/write styles  |
++-------------------+       input changes    +---------------------+
+
+         ^                                          ^
+         | context menu                             |
+         | (components/context-menu.html)           | MutationObserver
+         +-------------------+----------------------+
+                             |
+                      +------+------+
+                      |  Inspector  |
+                      | core/inspector|
+                      +-------------+
+
