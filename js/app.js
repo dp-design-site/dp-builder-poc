@@ -161,6 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let dragGroupStart = new Map();
 
   interact('.widget').draggable({
+    ignoreFrom: '[data-editable="text"], .wb-title, .wb-name, [contenteditable]',
     listeners: {
       start (event) {
         dragGroupStart.clear();
