@@ -39,7 +39,7 @@
 
     S.inputs = mapInputs(sec, ['tx-family','tx-size','tx-line','tx-weight','tx-style','tx-align','tx-transform','tx-color','tx-color-hex','tx-letter']);
     Object.values(S.inputs).forEach(inp => inp.addEventListener('input', apply));
-    S.inputs['tx-color'].addEventListener('input', syncColorToHex);
+    S.inputs['tx-color'].addEventListener('input', syncColorPair);
     S.inputs['tx-color-hex'].addEventListener('input', syncHexToColor);
 
     S.section = sec;
