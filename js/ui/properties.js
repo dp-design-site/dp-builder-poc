@@ -92,6 +92,8 @@
     setColor('#f-shadow-color', '#f-shadow-hex', state?.shadow?.color || '#000000');
 
     setDisabledGroup(!S.selected);
+    window.PropertiesSections?.typography?.sync?.(S.selected);
+
   }
 
   function num(v) { return (v === undefined || v === null || Number.isNaN(v)) ? '' : v; }
@@ -166,6 +168,10 @@
   }
 
   function sectionAppearance() {
+   // ... след sectionAppearance():
+    if (window.PropertiesSections?.typography) {
+      root.appendChild(window.PropertiesSections.typography.section());
+    }
     const wrap = section('Външен вид', 'appearance');
 
     // Background
