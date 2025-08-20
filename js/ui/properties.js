@@ -376,6 +376,16 @@
     return { enabled:true, x, y, blur, spread, color: rgbToHex(color) };
   }
 
+   // ============ Export helpers for external sections ============
+  window.syncColorToHex = function (colorSel, hexSel, value) {
+    const val = toHex(value);
+    const color = document.querySelector(colorSel);
+    const hex = document.querySelector(hexSel);
+    if (color) color.value = val;
+    if (hex) hex.value = val.toUpperCase();
+  };
+
+
   // Public API
   const API = { mount };
   global.PropertiesUI = API;
