@@ -120,5 +120,11 @@
     if (hexInput) hexInput.value = val.toUpperCase();
   };
 
+  global.syncHexToColor = function(e) {
+    const hexVal = e.target.value;
+    const color = document.querySelector('#tx-color');
+    if (color) color.value = hex(hexVal);
+  };
+
   NS.typography = { section, sync };
 })(window);
