@@ -69,3 +69,12 @@
 .theme-light .widget[data-type="window-basic"] .wb-sash {
   background: var(--dp-text-muted, #666);
 }
+.widget[data-type="window-basic"] .wb-title,
+.widget[data-type="window-basic"] .wb-name {
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
+}
+/* общо правило: */
+.widget { user-select: none; }
+.widget [data-editable="text"] { user-select: text; }
