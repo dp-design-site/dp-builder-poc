@@ -39,7 +39,7 @@
 
     S.inputs = mapInputs(sec, ['tx-family','tx-size','tx-line','tx-weight','tx-style','tx-align','tx-transform','tx-color','tx-color-hex','tx-letter']);
     Object.values(S.inputs).forEach(inp => inp.addEventListener('input', apply));
-    S.inputs['tx-color'].addEventListener('input', syncColorPair);
+    S.inputs['tx-color'].addEventListener('input', () => syncColorToHex('#tx-color', '#tx-color-hex', S.inputs['tx-color'].value));
     S.inputs['tx-color-hex'].addEventListener('input', syncHexToColor);
 
     S.section = sec;
@@ -105,11 +105,20 @@
   function hex(v){ return /^#[0-9a-fA-F]{6}$/.test(v)? v : '#000000'; }
   function rgbToHex(rgb){ if(!rgb) return '#000000'; const m=rgb.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i); if(!m) return '#000000'; const r=(+m[1]).toString(16).padStart(2,'0'); const g=(+m[2]).toString(16).padStart(2,'0'); const b=(+m[3]).toString(16).padStart(2,'0'); return `#${r}${g}${b}`; }
   function pick(val, options){ const clean=String(val||'').replaceAll('"',''); const found = options.find(o => clean.includes(o)); return found || options[0]; }
+
   function mapInputs(root, ids){
-   const m = {};
-   ids.forEach(id => m[id] = root.querySelector('#' + id));
-   return m;
-}
+    const m = {};
+    ids.forEach(id => m[id] = root.querySelector('#' + id));
+    return m;
+  }
+
+  global.syncColorToHex = function(colorSel, hexSel, value) {
+    const val = hex(value);
+    const color = document.querySelector(colorSel);
+    const hexInput = document.querySelector(hexSel);
+    if (color) color.value = val;
+    if (hexInput) hexInput.value = val.toUpperCase();
+  };
 
   NS.typography = { section, sync };
 })(window);
