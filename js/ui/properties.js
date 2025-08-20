@@ -174,46 +174,49 @@
   }
 
   function sectionAppearance() {
-      const wrap = section('Външен вид', 'appearance');
+  const wrap = section('Външен вид', 'appearance');
 
-    // Background
-    const bg = row([
-      label('Background'),
-      input({ id:'f-bg-color', type:'color' }, onBGColor),
-      input({ id:'f-bg-hex', type:'text', class:'hex', placeholder:'#RRGGBB' }, onBGHex),
-    ]);
-    bg.classList.add('row-color');
+  // Background
+  const bg = row([
+    label('Background'),
+    input({ id:'f-bg-color', type:'color' }, onBGColor),
+    input({ id:'f-bg-hex', type:'text', class:'hex', placeholder:'#RRGGBB' }, onBGHex),
+  ]);
+  bg.classList.add('row-color');
 
-    // Border
-    const bc = row([
-      label('Border'),
-      input({ id:'f-border-color', type:'color' }, onBorderColor),
-      input({ id:'f-border-hex', type:'text', class:'hex', placeholder:'#RRGGBB' }, onBorderHex),
-      input({ id:'f-border-width', type:'number', min:'0', step:'1', title:'Width (px)' }, onBorderWidth),
-    ]);
-    bc.classList.add('row-color');
+  // Border
+  const bc = row([
+    label('Border'),
+    input({ id:'f-border-color', type:'color' }, onBorderColor),
+    input({ id:'f-border-hex', type:'text', class:'hex', placeholder:'#RRGGBB' }, onBorderHex),
+    input({ id:'f-border-width', type:'number', min:'0', step:'1', title:'Width (px)' }, onBorderWidth),
+  ]);
+  bc.classList.add('row-color');
 
-    // Radius
-    const rad = row([
-      label('Radius'), input({ id:'f-radius', type:'number', min:'0', step:'1' }, onRadius),
-    ]);
-    rad.classList.add('row-2');
+  // Radius
+  const rad = row([
+    label('Radius'), input({ id:'f-radius', type:'number', min:'0', step:'1' }, onRadius),
+  ]);
+  rad.classList.add('row-2');
 
-    // Shadow (basic)
-    const sh = row([
-      input({ id:'f-shadow-enable', type:'checkbox' }, onShadowToggle), label('Shadow'),
-      input({ id:'f-shadow-x', type:'number', step:'1', title:'dx' }, onShadow),
-      input({ id:'f-shadow-y', type:'number', step:'1', title:'dy' }, onShadow),
-      input({ id:'f-shadow-blur', type:'number', min:'0', step:'1', title:'blur' }, onShadow),
-      input({ id:'f-shadow-spread', type:'number', step:'1', title:'spread' }, onShadow),
-      input({ id:'f-shadow-color', type:'color' }, onShadowColor),
-      input({ id:'f-shadow-hex', type:'text', class:'hex', placeholder:'#000000' }, onShadowHex),
-    ]);
-    sh.classList.add('shadow-row');
+  // Shadow
+  const sh = row([
+    input({ id:'f-shadow-enable', type:'checkbox' }, onShadowToggle), label('Shadow'),
+    input({ id:'f-shadow-x', type:'number', step:'1', title:'dx' }, onShadow),
+    input({ id:'f-shadow-y', type:'number', step:'1', title:'dy' }, onShadow),
+    input({ id:'f-shadow-blur', type:'number', min:'0', step:'1', title:'blur' }, onShadow),
+    input({ id:'f-shadow-spread', type:'number', step:'1', title:'spread' }, onShadow),
+    input({ id:'f-shadow-color', type:'color' }, onShadowColor),
+    input({ id:'f-shadow-hex', type:'text', class:'hex', placeholder:'#000000' }, onShadowHex),
+  ]);
+  sh.classList.add('shadow-row');
 
-    wrap.appendChild(bg); wrap.appendChild(bc); wrap.appendChild(rad); wrap.appendChild(sh);
-    return wrap;
-  }
+  wrap.appendChild(bg);
+  wrap.appendChild(bc);
+  wrap.appendChild(rad);
+  wrap.appendChild(sh);
+  return wrap;
+}
 
   // ============ Read/Write Widget State ============
   function appearanceTarget(el){ return el.querySelector('.wb') || el; }
