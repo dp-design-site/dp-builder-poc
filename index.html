@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>DP Configurator — Library Panel Demo</title>
 
-  <!-- Base styles (keep existing if present) -->
+  <!-- Base styles (keep existing if present) --> 
   <link rel="stylesheet" href="css/main.css" />
   <link rel="icon" href="favicon.png" type="image/png" />
 
@@ -23,7 +23,7 @@
     #workspace { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: auto 1fr auto; }
     /* Left panel width is controlled inside css/library.css via #library-panel */
     #main-stage { position: relative; display: flex; flex-direction: column; min-width: 0; }
-    #canvas { position: relative; flex: 1 1 auto; min-height: 0; }
+    #canvas { position: relative; flex: 1 1 auto; min-height: 0; overflow: auto; }
     .snapbar { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border-top: 1px solid var(--dp-border-col, #2a2f36); background: var(--dp-bg-elev, #15181b); color: var(--dp-text, #e6eaf0); }
     .snapbar label { font-size: 12px; display: inline-flex; align-items: center; gap: 6px; }
 
@@ -32,10 +32,17 @@
     #ribbon-mount{ height: var(--ribbon-h); }
 
     /* Canvas scroll area (only canvas should scroll) */
-    #canvas { overflow: auto; }
-    /* Temporary large scrollable area so you can test canvas-only scroll;
-       replace later with real infinite canvas or content-size calculation */
+    /* Temporary large scrollable area so you can test canvas-only scroll; replace later with real infinite canvas or content-size calculation */
     #canvas::after { content:""; position:absolute; left:0; top:0; width:2000px; height:1400px; pointer-events:none; }
+
+    /* Ensure the right properties panel is visible */
+    #properties-panel { width: 320px; border-left: 1px solid var(--dp-border-col, #2a2f36); background: var(--dp-bg-elev, #15181b); color: var(--dp-text, #e6eaf0); overflow: auto; }
+
+    /* Text selection rules: allow selecting only marked text nodes inside widgets */
+    .widget { user-select: none; }
+    .widget [data-editable="text"],
+    .widget .wb-title,
+    .widget .wb-name { user-select: text; -webkit-user-select: text; cursor: text; }
   </style>
 </head>
 <body>
@@ -98,12 +105,17 @@
   <!-- Library panel module -->
   <script src="js/ui/library.js"></script>
 
+  <!-- (Optional) Global popup text editor (disabled by default) -->
+  <!-- <script src="js/ui/text-editor.js"></script> -->
+
+  <!-- Properties extra sections (typography) -->
+  <script src="js/ui/props-typography.js"></script>
+
   <!-- Properties panel module -->
   <script src="js/ui/properties.js"></script>
 
-  <!-- Bootstrap Library → Canvas wiring -->
+  <!-- Bootstrap Library → Canvas wiring + Typography subsection attach/sync -->
   <script>
-    // Mount the library after app bootstrap; if app needs to expose hooks like dp.registerWidget, it should do so before this runs.
     (function initPanels() {
       try {
         if (!window.LibraryUI) return console.warn('LibraryUI not found: js/ui/library.js not loaded');
@@ -120,6 +132,25 @@
           PropertiesUI.mount({ container: '#properties-panel' });
         } else {
           console.warn('PropertiesUI not found: js/ui/properties.js not loaded');
+        }
+
+        // Attach Typography section even if properties.js doesn't know about it yet
+        if (window.PropertiesSections?.typography) {
+          const sec = PropertiesSections.typography.section();
+          const root = document.querySelector('#properties-panel .props-root') || document.querySelector('#properties-panel');
+          root && root.appendChild(sec);
+
+          // Sync helper
+          const syncTy = () => {
+            const sel = document.querySelector('.widget.selected');
+            PropertiesSections.typography.sync(sel);
+          };
+          // Sync on click and on mutations inside canvas
+          canvas.addEventListener('click', () => requestAnimationFrame(syncTy));
+          const mo = new MutationObserver(() => requestAnimationFrame(syncTy));
+          mo.observe(canvas, { subtree: true, attributes: true, attributeFilter: ['class','style','data-x','data-y'] });
+          // Initial
+          syncTy();
         }
       } catch (e) {
         console.error('Init error:', e);
