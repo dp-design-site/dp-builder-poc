@@ -33,6 +33,12 @@
     root.appendChild(sectionIdentity());
     root.appendChild(sectionLayout());
     root.appendChild(sectionAppearance());
+
+   // ... след sectionAppearance():
+    if (window.PropertiesSections?.typography) {
+      root.appendChild(window.PropertiesSections.typography.section());
+    }
+   
     S.container.appendChild(root);
 
     // Selection tracking: update on clicks + class/attr mutations
@@ -168,11 +174,7 @@
   }
 
   function sectionAppearance() {
-   // ... след sectionAppearance():
-    if (window.PropertiesSections?.typography) {
-      root.appendChild(window.PropertiesSections.typography.section());
-    }
-    const wrap = section('Външен вид', 'appearance');
+      const wrap = section('Външен вид', 'appearance');
 
     // Background
     const bg = row([
